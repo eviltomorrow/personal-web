@@ -1,7 +1,8 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect } from "react";
-import { getUserInfo, saveUserInfo, getAccessToken } from "./auth";
+import { getUserInfo, saveUserInfo, getAccessToken, startPeriodicRefresh, stopPeriodicRefresh } from "./auth";
+import { apiClient } from "./api";
 import type { UserInfo } from "./auth";
 
 interface UserContextType {
@@ -25,15 +26,14 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    startPeriodicRefresh();
+
     const cached = getUserInfo();
     if (cached) {
       Promise.resolve().then(() => setUser(cached));
     }
 
-    fetch("/api/v1/profile/get", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    apiClient("/api/v1/profile/get", { method: "POST" })
       .then((res) => res.json())
       .then((body) => {
         if (body.code === 0) {
@@ -43,6 +43,8 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
+
+    return () => stopPeriodicRefresh();
   }, []);
 
   return (

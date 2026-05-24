@@ -45,7 +45,28 @@ export function getUserInfo(): UserInfo | null {
   }
 }
 
+let refreshTimer: ReturnType<typeof setInterval> | null = null;
+
+export function startPeriodicRefresh(intervalMs = 60_000): void {
+  stopPeriodicRefresh();
+  refreshTimer = setInterval(async () => {
+    const expiresAt = ls()?.getItem(EXPIRES_AT_KEY);
+    if (!expiresAt) return;
+    if (Date.now() > Number(expiresAt) - 5 * 60 * 1000) {
+      await refreshTokens();
+    }
+  }, intervalMs);
+}
+
+export function stopPeriodicRefresh(): void {
+  if (refreshTimer !== null) {
+    clearInterval(refreshTimer);
+    refreshTimer = null;
+  }
+}
+
 export function clearTokens(): void {
+  stopPeriodicRefresh();
   ls()?.removeItem(ACCESS_TOKEN_KEY);
   ls()?.removeItem(REFRESH_TOKEN_KEY);
   ls()?.removeItem(EXPIRES_AT_KEY);
