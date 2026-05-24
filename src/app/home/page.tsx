@@ -3,7 +3,7 @@
 import { useState } from "react";
 import AuthGuard from "@/components/auth-guard";
 import Header from "@/components/header";
-import { getUserInfo } from "@/lib/auth";
+import { useUser } from "@/lib/user-context";
 
 function PenIcon() {
   return (
@@ -52,10 +52,8 @@ const tools = [
 
 export default function HomePage() {
   const [expanded, setExpanded] = useState(false);
-  const [nickname] = useState(() => {
-    const user = getUserInfo();
-    return user?.nickname || "Shepard";
-  });
+  const { user } = useUser();
+  const nickname = user?.nickname || "Shepard";
 
   return (
     <AuthGuard>

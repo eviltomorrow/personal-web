@@ -1,0 +1,10 @@
+.git
+.gitignore
+.next
+node_modules
+.opencode
+AGENTS.md
+CLAUDE.md
+README.md
+*.md
+tsconfig.tsbuildinfo

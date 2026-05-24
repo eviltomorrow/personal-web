@@ -2,13 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getUserInfo, clearTokens } from "@/lib/auth";
-import type { UserInfo } from "@/lib/auth";
+import { clearTokens } from "@/lib/auth";
+import { useUser } from "@/lib/user-context";
 
 export default function Header() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [user] = useState<UserInfo | null>(() => getUserInfo());
+  const { user } = useUser();
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

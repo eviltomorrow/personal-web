@@ -16,10 +16,15 @@ RUN npm run build
 FROM --platform=$BUILDPLATFORM node:20-alpine AS prod
 WORKDIR /app
 ARG APPNAME=unknown
-ENV APPNAME=${APPNAME}
-COPY --from=builder /personal-web/.next ./.next
-COPY --from=builder /personal-web/public ./public
-COPY --from=builder /personal-web/package*.json ./
-COPY --from=builder /personal-web/node_modules ./node_modules
+ENV APPNAME=${APPNAME} \
+    API_HOST=http://personal-api:8080
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs
+COPY --from=builder --chown=nextjs:nodejs /personal-web/public ./public
+COPY --from=builder --chown=nextjs:nodejs /personal-web/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /personal-web/.next/static ./.next/static
+USER nextjs
 EXPOSE 3000
-ENTRYPOINT ["npm", "start"]
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+CMD ["node", "server.js"]

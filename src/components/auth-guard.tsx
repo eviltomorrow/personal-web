@@ -1,14 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getAccessToken, isTokenExpired } from "@/lib/auth";
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
-  const [authorized] = useState<boolean | null>(() => {
+  const [authorized, setAuthorized] = useState<boolean | null>(null);
+
+  useEffect(() => {
     const token = getAccessToken();
-    return !!token && !isTokenExpired();
-  });
+    Promise.resolve().then(() => {
+      setAuthorized(!!token && !isTokenExpired());
+    });
+  }, []);
 
   if (authorized === null) {
     return (
