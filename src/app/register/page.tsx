@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 
 export default function RegisterPage() {
   const [nickname, setNickname] = useState("");
@@ -127,12 +128,12 @@ export default function RegisterPage() {
 
           <div className="mt-6 text-center">
             <span className="text-[14px] text-[#86868b]">已有账户？</span>
-            <a
+            <Link
               href="/"
               className="ml-1 text-[14px] font-medium text-[#0071e3] transition-colors duration-200 hover:text-[#0077ed] hover:underline"
             >
               登录
-            </a>
+            </Link>
           </div>
         </div>
 
@@ -164,12 +165,12 @@ export default function RegisterPage() {
             </div>
             <h2 className="text-[20px] font-semibold text-[#1d1d1f]">注册成功</h2>
             <p className="mt-2 text-[14px] text-[#86868b]">您的账户已创建成功，请前往登录。</p>
-            <a
+            <Link
               href="/"
               className="mt-6 inline-block w-full rounded-full bg-[#0071e3] py-[14px] text-[15px] font-medium text-white transition-all duration-200 hover:bg-[#0077ed] shadow-sm"
             >
               前往登录
-            </a>
+            </Link>
           </div>
         </div>
       )}

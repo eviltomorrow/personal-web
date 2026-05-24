@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import AuthGuard from "@/components/auth-guard";
 import Header from "@/components/header";
 import { getUserInfo } from "@/lib/auth";
@@ -52,12 +52,10 @@ const tools = [
 
 export default function HomePage() {
   const [expanded, setExpanded] = useState(false);
-  const [nickname, setNickname] = useState("Shepard");
-
-  useEffect(() => {
+  const [nickname] = useState(() => {
     const user = getUserInfo();
-    if (user?.nickname) setNickname(user.nickname);
-  }, []);
+    return user?.nickname || "Shepard";
+  });
 
   return (
     <AuthGuard>

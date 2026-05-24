@@ -8,12 +8,8 @@ import type { UserInfo } from "@/lib/auth";
 export default function Header() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [user, setUser] = useState<UserInfo | null>(null);
+  const [user] = useState<UserInfo | null>(() => getUserInfo());
   const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    setUser(getUserInfo());
-  }, []);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
