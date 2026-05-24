@@ -1,33 +1,59 @@
 const ACCESS_TOKEN_KEY = "access_token";
 const REFRESH_TOKEN_KEY = "refresh_token";
 const EXPIRES_AT_KEY = "expires_at";
+const USER_KEY = "user_info";
+
+export interface UserInfo {
+  nickname: string;
+  email: string;
+}
+
+function ls(): Storage | null {
+  if (typeof window === "undefined") return null;
+  return localStorage;
+}
 
 export function saveTokens(data: {
   accessToken: string;
   refreshToken: string;
   expiresAt: number;
 }): void {
-  localStorage.setItem(ACCESS_TOKEN_KEY, data.accessToken);
-  localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
-  localStorage.setItem(EXPIRES_AT_KEY, String(data.expiresAt));
+  ls()?.setItem(ACCESS_TOKEN_KEY, data.accessToken);
+  ls()?.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
+  ls()?.setItem(EXPIRES_AT_KEY, String(data.expiresAt));
 }
 
 export function getAccessToken(): string | null {
-  return localStorage.getItem(ACCESS_TOKEN_KEY);
+  return ls()?.getItem(ACCESS_TOKEN_KEY) ?? null;
 }
 
 function getRefreshToken(): string | null {
-  return localStorage.getItem(REFRESH_TOKEN_KEY);
+  return ls()?.getItem(REFRESH_TOKEN_KEY) ?? null;
+}
+
+export function saveUserInfo(user: UserInfo): void {
+  ls()?.setItem(USER_KEY, JSON.stringify(user));
+}
+
+export function getUserInfo(): UserInfo | null {
+  const raw = ls()?.getItem(USER_KEY);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as UserInfo;
+  } catch {
+    return null;
+  }
 }
 
 export function clearTokens(): void {
-  localStorage.removeItem(ACCESS_TOKEN_KEY);
-  localStorage.removeItem(REFRESH_TOKEN_KEY);
-  localStorage.removeItem(EXPIRES_AT_KEY);
+  ls()?.removeItem(ACCESS_TOKEN_KEY);
+  ls()?.removeItem(REFRESH_TOKEN_KEY);
+  ls()?.removeItem(EXPIRES_AT_KEY);
+  ls()?.removeItem(USER_KEY);
 }
 
 export function isTokenExpired(): boolean {
-  const expiresAt = localStorage.getItem(EXPIRES_AT_KEY);
+  const expiresAt = ls()?.getItem(EXPIRES_AT_KEY);
   if (!expiresAt) return true;
   return Date.now() > Number(expiresAt) - 30_000;
 }
