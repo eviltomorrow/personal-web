@@ -30,7 +30,7 @@ export function getAccessToken(): string | null {
   return ls()?.getItem(ACCESS_TOKEN_KEY) ?? null;
 }
 
-function getRefreshToken(): string | null {
+export function getRefreshToken(): string | null {
   return ls()?.getItem(REFRESH_TOKEN_KEY) ?? null;
 }
 
