@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect } from "react";
-import { getUserInfo, saveUserInfo, getAccessToken, startPeriodicRefresh, stopPeriodicRefresh } from "./auth";
+import { getUserInfo, saveUserInfo, getAccessToken, isTokenExpired, startPeriodicRefresh, stopPeriodicRefresh } from "./auth";
 import { apiClient } from "./api";
 import type { UserInfo } from "./auth";
 
@@ -21,7 +21,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const token = getAccessToken();
-    if (!token) {
+    if (!token || isTokenExpired()) {
       Promise.resolve().then(() => setLoading(false));
       return;
     }

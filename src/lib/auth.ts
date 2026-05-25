@@ -20,7 +20,9 @@ export function saveTokens(data: {
 }): void {
   ls()?.setItem(ACCESS_TOKEN_KEY, data.accessToken);
   ls()?.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
-  ls()?.setItem(EXPIRES_AT_KEY, String(data.expiresAt));
+  // normalize seconds to milliseconds (Go backend returns unix seconds)
+  const expiresAt = data.expiresAt < 1e12 ? data.expiresAt * 1000 : data.expiresAt;
+  ls()?.setItem(EXPIRES_AT_KEY, String(expiresAt));
 }
 
 export function getAccessToken(): string | null {
@@ -75,8 +77,10 @@ export function clearTokens(): void {
 
 export function isTokenExpired(): boolean {
   const expiresAt = ls()?.getItem(EXPIRES_AT_KEY);
-  if (!expiresAt) return true;
-  return Date.now() > Number(expiresAt) - 30_000;
+  if (!expiresAt) return false;
+  let expires = Number(expiresAt);
+  if (expires < 1e12) expires *= 1000;
+  return Date.now() > expires - 30_000;
 }
 
 let isRefreshing = false;
