@@ -30,16 +30,20 @@ export default function Header() {
     <header className="sticky top-0 z-50 border-b border-[#d2d2d7]/60 bg-white/80 backdrop-blur-xl">
       <div className="mx-auto flex h-14 max-w-[1100px] items-center justify-between px-6">
         <span className="text-[15px] font-semibold text-[#1d1d1f]">
-          {user?.nickname || "liarsa"}
+          {user?.nickname || "大圣"}
         </span>
         <div className="flex items-center gap-4">
           <span className="text-[13px] text-[#6e6e73]">{user?.email || ""}</span>
           <div className="relative" ref={menuRef}>
             <button
               onClick={() => setOpen(!open)}
-              className="h-8 w-8 rounded-full bg-[#0071e3] flex items-center justify-center text-[13px] font-medium text-white transition-all duration-200 hover:bg-[#0077ed] active:bg-[#006edb]"
+              className="h-8 w-8 rounded-full bg-[#0071e3] flex items-center justify-center text-[13px] font-medium text-white transition-all duration-200 hover:bg-[#0077ed] active:bg-[#006edb] overflow-hidden"
             >
-              {user?.nickname?.charAt(0).toUpperCase() || "U"}
+              {user?.avatar_url ? (
+                <img src={user.avatar_url} alt="" className="h-full w-full object-cover" />
+              ) : (
+                user?.nickname?.charAt(0).toUpperCase() || "U"
+              )}
             </button>
 
             {open && (

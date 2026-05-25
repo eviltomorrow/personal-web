@@ -5,7 +5,8 @@ const USER_KEY = "user_info";
 
 export interface UserInfo {
   nickname: string;
-  email: string;
+  email?: string;
+  avatar_url?: string;
 }
 
 function ls(): Storage | null {

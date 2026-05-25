@@ -36,9 +36,9 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     apiClient("/api/v1/profile/get", { method: "POST" })
       .then((res) => res.json())
       .then((body) => {
-        if (body.code === 0) {
-          saveUserInfo(body.data);
-          setUser(body.data);
+        if (body.code === 0 && body.data?.profile) {
+          saveUserInfo(body.data.profile);
+          setUser(body.data.profile);
         }
       })
       .catch(() => {})
