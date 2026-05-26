@@ -92,7 +92,7 @@ export default function LoginPage() {
                 <label htmlFor="password" className="text-[12px] font-medium text-[#6e6e73]">
                   密码
                 </label>
-                <a href="/forgot-password" className="text-[12px] text-[#0071e3] hover:underline">
+                <a href="/forgot-password" className="text-[12px] text-[#0071e3] hover:underline cursor-pointer">
                   忘记密码？
                 </a>
               </div>
@@ -113,7 +113,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="mt-2 w-full rounded-full bg-[#0071e3] py-[14px] text-[15px] font-medium text-white transition-all duration-200 hover:bg-[#0077ed] active:bg-[#006edb] disabled:opacity-50 shadow-sm"
+              className="mt-2 w-full rounded-full bg-[#0071e3] py-[14px] text-[15px] font-medium text-white transition-all duration-200 hover:bg-[#0077ed] active:bg-[#006edb] disabled:opacity-50 shadow-sm cursor-pointer disabled:cursor-not-allowed"
             >
               {loading ? "登录中..." : "登录"}
             </button>
@@ -123,7 +123,7 @@ export default function LoginPage() {
             <span className="text-[14px] text-[#86868b]">还没有账户？</span>
             <a
               href="/register"
-              className="ml-1 text-[14px] font-medium text-[#0071e3] transition-colors duration-200 hover:text-[#0077ed] hover:underline"
+              className="ml-1 text-[14px] font-medium text-[#0071e3] transition-colors duration-200 hover:text-[#0077ed] hover:underline cursor-pointer"
             >
               注册
             </a>
@@ -140,15 +140,15 @@ export default function LoginPage() {
         </div>
 
         <div className="text-center text-[11px] text-[#86868b]">
-          <a href="#" className="hover:underline">
+          <a href="#" className="hover:underline cursor-pointer">
             版权所有 © 2025 liarsa Inc. 保留所有权利。
           </a>
           <span className="mx-2">|</span>
-          <a href="#" className="hover:underline">
+          <a href="#" className="hover:underline cursor-pointer">
             隐私政策
           </a>
           <span className="mx-2">|</span>
-          <a href="#" className="hover:underline">
+          <a href="#" className="hover:underline cursor-pointer">
             服务条款
           </a>
         </div>

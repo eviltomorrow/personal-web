@@ -47,7 +47,7 @@ function Activity({ label, module, time, icon }: { label: string; module: string
 
 function QuickAction({ label, desc, icon, color }: { label: string; desc: string; icon: ReactNode; color: string }) {
   return (
-    <button className="group flex items-center gap-3 rounded-xl px-4 py-3 transition-all duration-200 hover:bg-[#f5f5f7]">
+    <button className="group flex items-center gap-3 rounded-xl px-4 py-3 transition-all duration-200 hover:bg-[#f5f5f7] cursor-pointer">
       <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${color} transition-all duration-200 group-hover:scale-105`}>
         {icon}
       </div>
@@ -136,7 +136,7 @@ export default function HomePage() {
                       {now.toLocaleDateString("zh-CN", { year: "numeric", month: "long", day: "numeric", weekday: "long" })}
                     </p>
                   </div>
-                  <button className="group hidden sm:flex items-center gap-2 rounded-full bg-[#0071e3] px-5 py-2.5 text-[13px] font-medium text-white transition-all duration-200 hover:bg-[#0077ed] hover:shadow-[0_4px_12px_rgba(0,113,227,0.3)] active:scale-[0.97] shadow-sm">
+                  <button className="group hidden sm:flex items-center gap-2 rounded-full bg-[#0071e3] px-5 py-2.5 text-[13px] font-medium text-white transition-all duration-200 hover:bg-[#0077ed] hover:shadow-[0_4px_12px_rgba(0,113,227,0.3)] active:scale-[0.97] shadow-sm cursor-pointer">
                     <span className="transition-transform duration-200 group-hover:rotate-12">{I.Sparkle}</span>
                     快速操作
                   </button>
@@ -158,14 +158,14 @@ export default function HomePage() {
                     <h2 className="text-[16px] font-semibold tracking-[-0.01em] text-[#1d1d1f]">功能模块</h2>
                     <span className="rounded-full bg-[#0071e3]/10 px-2.5 py-0.5 text-[10px] font-medium text-[#0071e3]">共 {modules.length} 个</span>
                   </div>
-                  <button className="text-[12px] font-medium text-[#0071e3] transition-all duration-200 hover:text-[#0077ed] hover:underline-offset-2 hover:underline">
+                  <button className="text-[12px] font-medium text-[#0071e3] transition-all duration-200 hover:text-[#0077ed] hover:underline-offset-2 hover:underline cursor-pointer">
                     查看全部 →
                   </button>
                 </div>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {modules.map((m) => (
                     <button key={m.key} onClick={() => setActiveNav(m.key)}
-                      className={`group relative overflow-hidden rounded-2xl border border-[#e8e8ed]/80 bg-white p-5 text-left transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 ${m.shadow}`}
+                      className={`group relative overflow-hidden rounded-2xl border border-[#e8e8ed]/80 bg-white p-5 text-left transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 cursor-pointer ${m.shadow}`}
                     >
                       <div className={`absolute inset-0 bg-gradient-to-br opacity-0 transition-opacity duration-300 group-hover:opacity-100 ${m.gradient}`} />
                       <div className="relative">
@@ -192,7 +192,7 @@ export default function HomePage() {
                 <div className="rounded-2xl border border-[#e8e8ed]/80 bg-white p-5 shadow-[0_1px_4px_rgba(0,0,0,0.04)] lg:col-span-3 transition-all duration-200 hover:shadow-md">
                   <div className="mb-4 flex items-center justify-between">
                     <h2 className="text-[15px] font-semibold text-[#1d1d1f]">最近动态</h2>
-                    <button className="text-[12px] font-medium text-[#0071e3] transition-colors hover:text-[#0077ed]">查看全部 →</button>
+                    <button className="text-[12px] font-medium text-[#0071e3] transition-colors hover:text-[#0077ed] cursor-pointer">查看全部 →</button>
                   </div>
                   <div className="space-y-3">
                     <Activity label="更新了个人资料" module="账户" time="2 小时前" icon={I.User} />

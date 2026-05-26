@@ -43,7 +43,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
             </p>
             <Link
               href="/"
-              className="mt-6 inline-block w-full rounded-full bg-[#0071e3] py-[14px] text-[15px] font-medium text-white transition-all duration-200 hover:bg-[#0077ed] shadow-sm"
+              className="mt-6 inline-block w-full rounded-full bg-[#0071e3] py-[14px] text-[15px] font-medium text-white transition-all duration-200 hover:bg-[#0077ed] shadow-sm cursor-pointer"
             >
               前往登录
             </Link>

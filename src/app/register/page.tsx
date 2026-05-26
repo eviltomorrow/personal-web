@@ -120,7 +120,7 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={loading}
-              className="mt-2 w-full rounded-full bg-[#0071e3] py-[14px] text-[15px] font-medium text-white transition-all duration-200 hover:bg-[#0077ed] active:bg-[#006edb] disabled:opacity-50 shadow-sm"
+              className="mt-2 w-full rounded-full bg-[#0071e3] py-[14px] text-[15px] font-medium text-white transition-all duration-200 hover:bg-[#0077ed] active:bg-[#006edb] disabled:opacity-50 shadow-sm cursor-pointer disabled:cursor-not-allowed"
             >
               {loading ? "注册中..." : "注册"}
             </button>
@@ -130,7 +130,7 @@ export default function RegisterPage() {
             <span className="text-[14px] text-[#86868b]">已有账户？</span>
             <Link
               href="/"
-              className="ml-1 text-[14px] font-medium text-[#0071e3] transition-colors duration-200 hover:text-[#0077ed] hover:underline"
+              className="ml-1 text-[14px] font-medium text-[#0071e3] transition-colors duration-200 hover:text-[#0077ed] hover:underline cursor-pointer"
             >
               登录
             </Link>
@@ -147,11 +147,11 @@ export default function RegisterPage() {
         </div>
 
         <div className="text-center text-[11px] text-[#86868b]">
-          <a href="#" className="hover:underline">版权所有 © 2025 liarsa Inc. 保留所有权利。</a>
+          <a href="#" className="hover:underline cursor-pointer">版权所有 © 2025 liarsa Inc. 保留所有权利。</a>
           <span className="mx-2">|</span>
-          <a href="#" className="hover:underline">隐私政策</a>
+          <a href="#" className="hover:underline cursor-pointer">隐私政策</a>
           <span className="mx-2">|</span>
-          <a href="#" className="hover:underline">服务条款</a>
+          <a href="#" className="hover:underline cursor-pointer">服务条款</a>
         </div>
       </div>
 
@@ -167,7 +167,7 @@ export default function RegisterPage() {
             <p className="mt-2 text-[14px] text-[#86868b]">您的账户已创建成功，请前往登录。</p>
             <Link
               href="/"
-              className="mt-6 inline-block w-full rounded-full bg-[#0071e3] py-[14px] text-[15px] font-medium text-white transition-all duration-200 hover:bg-[#0077ed] shadow-sm"
+              className="mt-6 inline-block w-full rounded-full bg-[#0071e3] py-[14px] text-[15px] font-medium text-white transition-all duration-200 hover:bg-[#0077ed] shadow-sm cursor-pointer"
             >
               前往登录
             </Link>
