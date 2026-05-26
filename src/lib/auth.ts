@@ -17,12 +17,12 @@ function ls(): Storage | null {
 export function saveTokens(data: {
   accessToken: string;
   refreshToken: string;
-  expiresAt: number;
+  expiresIn: number;
 }): void {
   ls()?.setItem(ACCESS_TOKEN_KEY, data.accessToken);
   ls()?.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
-  // normalize seconds to milliseconds (Go backend returns unix seconds)
-  const expiresAt = data.expiresAt < 1e12 ? data.expiresAt * 1000 : data.expiresAt;
+  // expiresIn is relative seconds from now, compute absolute timestamp
+  const expiresAt = Date.now() + data.expiresIn * 1000;
   ls()?.setItem(EXPIRES_AT_KEY, String(expiresAt));
 }
 
@@ -101,7 +101,7 @@ export async function refreshTokens(): Promise<boolean> {
   isRefreshing = true;
   refreshPromise = (async () => {
     try {
-      const res = await fetch("/api/v1/auth/refresh", {
+      const res = await fetch("/api/v1/auth/token/refresh", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ refresh_token: refreshToken }),
@@ -114,7 +114,7 @@ export async function refreshTokens(): Promise<boolean> {
       saveTokens({
         accessToken: body.data.access_token,
         refreshToken: body.data.refresh_token,
-        expiresAt: body.data.expires_at,
+        expiresIn: body.data.expires_in,
       });
       return true;
     } catch {

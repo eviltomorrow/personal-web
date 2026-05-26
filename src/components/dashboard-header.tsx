@@ -37,7 +37,7 @@ export default function DashboardHeader({
   function handleLogout() {
     const refreshToken = getRefreshToken();
     if (refreshToken) {
-      fetch("/api/v1/auth/logout", {
+      fetch("/api/v1/auth/token/revoke", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ refresh_token: refreshToken }),

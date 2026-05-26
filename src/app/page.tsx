@@ -25,7 +25,7 @@ export default function LoginPage() {
       const res = await fetch("/api/v1/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ auth_type: "email", identifier: email, password }),
       });
 
       const body = await res.json();
@@ -38,12 +38,12 @@ export default function LoginPage() {
       saveTokens({
         accessToken: body.data.access_token,
         refreshToken: body.data.refresh_token,
-        expiresAt: body.data.expires_at,
+        expiresIn: body.data.expires_in,
       });
 
       saveUserInfo({
-        nickname: body.data.nickname,
-        email: body.data.email,
+        nickname: email.split("@")[0],
+        email,
       });
 
       router.push("/home");

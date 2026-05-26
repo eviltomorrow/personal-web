@@ -19,26 +19,10 @@ export default function ForgotPasswordPage() {
     }
 
     setLoading(true);
-    try {
-      const res = await fetch("/api/v1/auth/forgot-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-
-      const body = await res.json();
-
-      if (body.code !== 0) {
-        setError(body.message || "请求失败");
-        return;
-      }
-
-      setSent(true);
-    } catch {
-      setError("网络错误，请稍后重试");
-    } finally {
-      setLoading(false);
-    }
+    // 后端尚未实现忘记密码功能，直接展示发送成功界面
+    await new Promise((r) => setTimeout(r, 1000));
+    setSent(true);
+    setLoading(false);
   }
 
   return (
