@@ -2,7 +2,6 @@ import {
   getAccessToken,
   isTokenExpired,
   refreshTokens,
-  clearTokens,
 } from "./auth";
 
 export async function apiClient(
@@ -13,7 +12,6 @@ export async function apiClient(
   if (accessToken && isTokenExpired()) {
     const refreshed = await refreshTokens();
     if (!refreshed) {
-      clearTokens();
       window.location.href = "/";
       throw new Error("Session expired");
     }
@@ -38,7 +36,6 @@ export async function apiClient(
       return fetch(url, { ...options, headers: retryHeaders });
     }
 
-    clearTokens();
     window.location.href = "/";
     throw new Error("Session expired");
   }

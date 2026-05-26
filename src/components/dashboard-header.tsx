@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { useUser } from "@/lib/user-context";
 import { clearTokens, getRefreshToken } from "@/lib/auth";
 import { I, type NavItem } from "./icons";
@@ -108,7 +109,7 @@ export default function DashboardHeader({
             className="flex h-9 w-9 items-center justify-center rounded-full bg-[#0071e3] text-[15px] font-bold text-white shadow-sm ring-2 ring-white transition-all duration-200 hover:bg-[#0077ed] active:bg-[#006edb] overflow-hidden"
           >
             {avatarUrl ? (
-              <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+              <Image src={avatarUrl} alt="" width={36} height={36} className="h-full w-full object-cover" />
             ) : (
               initial
             )}

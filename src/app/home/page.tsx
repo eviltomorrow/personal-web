@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import Image from "next/image";
 import AuthGuard from "@/components/auth-guard";
 import Sidebar from "@/components/sidebar";
 import DashboardHeader from "@/components/dashboard-header";
@@ -116,7 +117,7 @@ export default function HomePage() {
                     <div className="absolute inset-0 rounded-full bg-gradient-to-br from-[#0071e3] via-[#4a9eff] to-[#005bbf] p-[2px] shadow-[0_4px_16px_rgba(0,113,227,0.25)]">
                       <div className="h-full w-full overflow-hidden rounded-full bg-white">
                         {avatarUrl ? (
-                          <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+                          <Image src={avatarUrl} alt="" width={64} height={64} className="h-full w-full object-cover" />
                         ) : (
                           <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#0071e3] to-[#005bbf] text-[22px] font-semibold text-white">{initial}</div>
                         )}

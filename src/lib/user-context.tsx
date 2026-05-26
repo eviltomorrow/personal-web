@@ -6,40 +6,29 @@ import type { UserInfo } from "./auth";
 
 interface UserContextType {
   user: UserInfo | null;
-  loading: boolean;
 }
 
 const UserContext = createContext<UserContextType>({
   user: null,
-  loading: true,
 });
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<UserInfo | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user] = useState<UserInfo | null>(() => {
+    const token = getAccessToken();
+    if (!token || isTokenExpired()) return null;
+    return getUserInfo();
+  });
 
   useEffect(() => {
     const token = getAccessToken();
-    if (!token || isTokenExpired()) {
-      Promise.resolve().then(() => setLoading(false));
-      return;
+    if (token && !isTokenExpired()) {
+      startPeriodicRefresh();
     }
-
-    startPeriodicRefresh();
-
-    const cached = getUserInfo();
-    if (cached) {
-      setUser(cached);
-      setLoading(false);
-    } else {
-      setLoading(false);
-    }
-
     return () => stopPeriodicRefresh();
   }, []);
 
   return (
-    <UserContext.Provider value={{ user, loading }}>
+    <UserContext.Provider value={{ user }}>
       {children}
     </UserContext.Provider>
   );
