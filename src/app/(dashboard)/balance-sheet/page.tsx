@@ -301,10 +301,10 @@ export default function BalanceSheetPage() {
       const data = store[m];
       if (!data) return;
       saveSheet(m, {
-        assets: data.assets as any,
-        liabilities: data.liabilities as any,
-        income: data.income as any,
-        expenses: data.expenses as any,
+        assets: data.assets,
+        liabilities: data.liabilities,
+        income: data.income,
+        expenses: data.expenses,
       });
     }, 2000);
     return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
@@ -633,7 +633,6 @@ export default function BalanceSheetPage() {
   }
 
   function renderGroup(section: Section, groupIdx: number, g: Group) {
-    const isEditing = editEntry?.section === section && editEntry?.groupIdx === groupIdx && editEntry !== null;
     const isAdding = addingTo?.section === section && addingTo?.groupIdx === groupIdx;
     const isRenaming = renamingGroup?.section === section && renamingGroup?.groupIdx === groupIdx;
     const total = totalGroup(g);
