@@ -123,7 +123,7 @@ export default function DashboardHeader({
                 <p className="text-[13px] font-medium text-[#1d1d1f]">{nickname}</p>
                 <p className="text-[11px] text-[#86868b]">{user?.email}</p>
               </div>
-              <button onClick={() => { setDropdownOpen(false); }}
+              <button onClick={() => { setDropdownOpen(false); router.push("/profile"); }}
                 className="flex w-full items-center gap-2 px-4 py-2.5 text-[13px] text-[#1d1d1f] transition-all duration-200 hover:bg-[#f5f5f7] cursor-pointer"
               >
                 {I.User}

@@ -4,9 +4,16 @@ const EXPIRES_AT_KEY = "expires_at";
 const USER_KEY = "user_info";
 
 export interface UserInfo {
+  user_id?: string;
   nickname: string;
   email?: string;
+  phone?: string;
   avatar_url?: string;
+  gender?: number;
+  birthday?: number;
+  bio?: string;
+  created_at?: number;
+  updated_at?: number;
 }
 
 function ls(): Storage | null {
