@@ -13,7 +13,7 @@ export async function apiClient(
     const refreshed = await refreshTokens();
     if (!refreshed) {
       window.location.href = "/";
-      throw new Error("Session expired");
+      return new Promise<Response>(() => {});
     }
   }
 
@@ -37,7 +37,7 @@ export async function apiClient(
     }
 
     window.location.href = "/";
-    throw new Error("Session expired");
+    return new Promise<Response>(() => {});
   }
 
   return response;
