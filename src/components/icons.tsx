@@ -43,12 +43,7 @@ export interface NavItem {
 }
 
 export const navItems: NavItem[] = [
-  { key: "home",      icon: I.Home,     label: "首页" },
-  { key: "notes",     icon: I.Notebook,  label: "笔记" },
-  { key: "projects",  icon: I.Folder,    label: "项目" },
-  { key: "bookmarks", icon: I.Bookmark,  label: "收藏" },
-  { key: "gallery",   icon: I.Photo,     label: "相册" },
-  { key: "calendar",  icon: I.Calendar,  label: "日历", badge: "3" },
-  { key: "stats",     icon: I.Chart,     label: "数据" },
-  { key: "settings",  icon: I.Gear,      label: "设置" },
+  { key: "home",          icon: I.Home,     label: "首页" },
+  { key: "balance-sheet", icon: I.Chart,    label: "资产与负债" },
+  { key: "settings",      icon: I.Gear,     label: "设置" },
 ];

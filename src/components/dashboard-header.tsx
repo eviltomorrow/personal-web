@@ -123,14 +123,28 @@ export default function DashboardHeader({
                 <p className="text-[13px] font-medium text-[#1d1d1f]">{nickname}</p>
                 <p className="text-[11px] text-[#86868b]">{user?.email}</p>
               </div>
-              <button onClick={handleLogout}
-                className="flex w-full items-center gap-2 px-4 py-2.5 text-[13px] text-red-500 transition-all duration-200 hover:bg-[#f5f5f7] cursor-pointer"
+              <button onClick={() => { setDropdownOpen(false); }}
+                className="flex w-full items-center gap-2 px-4 py-2.5 text-[13px] text-[#1d1d1f] transition-all duration-200 hover:bg-[#f5f5f7] cursor-pointer"
               >
-                <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth="1.5">
-                  <path d="M7 17h8a2 2 0 002-2V5a2 2 0 00-2-2H7M3 10h10m-3-3l3 3-3 3" />
-                </svg>
-                退出登录
+                {I.User}
+                个人信息
               </button>
+              <button onClick={() => { setDropdownOpen(false); router.push("/settings"); }}
+                className="flex w-full items-center gap-2 px-4 py-2.5 text-[13px] text-[#1d1d1f] transition-all duration-200 hover:bg-[#f5f5f7] cursor-pointer"
+              >
+                {I.Gear}
+                设置
+              </button>
+              <div className="border-t border-[#f5f5f7] mt-1 pt-1">
+                <button onClick={handleLogout}
+                  className="flex w-full items-center gap-2 px-4 py-2.5 text-[13px] text-red-500 transition-all duration-200 hover:bg-[#f5f5f7] cursor-pointer"
+                >
+                  <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth="1.5">
+                    <path d="M7 17h8a2 2 0 002-2V5a2 2 0 00-2-2H7M3 10h10m-3-3l3 3-3 3" />
+                  </svg>
+                  退出登录
+                </button>
+              </div>
             </div>
           )}
         </div>
