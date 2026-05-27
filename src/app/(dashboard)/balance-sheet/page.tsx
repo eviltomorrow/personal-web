@@ -6,6 +6,7 @@ import AuthGuard from "@/components/auth-guard";
 import Sidebar from "@/components/sidebar";
 import DashboardHeader from "@/components/dashboard-header";
 import { I, navItems } from "@/components/icons";
+import { fetchSheet, saveSheet } from "@/lib/assets";
 
 interface Entry {
   id: string;
@@ -13,12 +14,14 @@ interface Entry {
   amount: number;
   code?: string;
   quantity?: number;
+  sort_order?: number;
 }
 
 interface Group {
   id: string;
   label: string;
   type: string;
+  sort_order?: number;
   entries: Entry[];
 }
 
@@ -72,74 +75,7 @@ const TABLE_SIZE = {
 };
 
 function defaultSheet(): SheetData {
-  return {
-    assets: [
-      { id: "cash", label: "现金类", type: "cash", entries: [
-        { id: "c1", name: "活期存款", amount: 85600 },
-        { id: "c2", name: "货币基金", amount: 50000 },
-        { id: "c3", name: "备用金", amount: 20000 },
-      ]},
-      { id: "fund", label: "基金", type: "fund", entries: [
-        { id: "f1", name: "沪深300指数增强A", amount: 48000, code: "110030", quantity: 28500 },
-        { id: "f2", name: "中证500ETF联接C", amount: 32000, code: "006783", quantity: 42000 },
-      ]},
-      { id: "stock", label: "股票", type: "stock", entries: [
-        { id: "s1", name: "贵州茅台", amount: 126000, code: "600519", quantity: 100 },
-        { id: "s2", name: "腾讯控股", amount: 85000, code: "00700", quantity: 200 },
-        { id: "s3", name: "招商银行", amount: 42000, code: "600036", quantity: 1200 },
-      ]},
-      { id: "property", label: "固定资产", type: "property", entries: [
-        { id: "p1", name: "自住房产", amount: 680000 },
-        { id: "p2", name: "车辆", amount: 168000 },
-      ]},
-      { id: "other_asset", label: "其他资产", type: "other", entries: [
-        { id: "oa1", name: "定期存款", amount: 100000 },
-        { id: "oa2", name: "贵金属", amount: 35000 },
-      ]},
-    ],
-    liabilities: [
-      { id: "mortgage", label: "住房贷款", type: "loan", entries: [
-        { id: "l1", name: "工商银行房贷", amount: 320000 },
-      ]},
-      { id: "consumer_loan", label: "消费贷款", type: "loan", entries: [
-        { id: "l2", name: "装修贷", amount: 45000 },
-      ]},
-      { id: "credit", label: "信用卡", type: "credit", entries: [
-        { id: "lc1", name: "招商信用卡", amount: 6800 },
-        { id: "lc2", name: "中信信用卡", amount: 3200 },
-      ]},
-      { id: "other_liability", label: "其他负债", type: "other", entries: [
-        { id: "lo1", name: "亲友借款", amount: 12000 },
-      ]},
-    ],
-    income: [
-      { id: "salary", label: "工资收入", type: "income", entries: [
-        { id: "i1", name: "月薪", amount: 25000 },
-      ]},
-      { id: "investment_income", label: "投资收益", type: "income", entries: [
-        { id: "i2", name: "基金分红", amount: 1200 },
-        { id: "i3", name: "利息收入", amount: 350 },
-      ]},
-      { id: "other_income", label: "其他收入", type: "income", entries: [
-        { id: "i4", name: "兼职收入", amount: 3000 },
-      ]},
-    ],
-    expenses: [
-      { id: "living", label: "生活开支", type: "expense", entries: [
-        { id: "e1", name: "餐饮", amount: 3500 },
-        { id: "e2", name: "交通", amount: 800 },
-        { id: "e3", name: "购物", amount: 2000 },
-      ]},
-      { id: "housing", label: "居住开支", type: "expense", entries: [
-        { id: "e4", name: "房租", amount: 4500 },
-        { id: "e5", name: "水电物业", amount: 600 },
-      ]},
-      { id: "entertainment", label: "娱乐", type: "expense", entries: [
-        { id: "e6", name: "电影", amount: 200 },
-        { id: "e7", name: "旅行", amount: 1500 },
-      ]},
-    ],
-  };
+  return { assets: [], liabilities: [], income: [], expenses: [] };
 }
 
 let idCounter = Date.now();
@@ -338,8 +274,41 @@ export default function BalanceSheetPage() {
   const [showPreview, setShowPreview] = useState(false);
   const [showMom, setShowMom] = useState(false);
   const monthPickerRef = useRef<HTMLDivElement>(null);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => { saveStore(store); }, [store]);
+
+  useEffect(() => {
+    fetchSheet(activeMonth).then((apiData) => {
+      if (!apiData) return;
+      if (apiData.assets.length === 0 && apiData.liabilities.length === 0 && apiData.income.length === 0 && apiData.expenses.length === 0) return;
+      setStore((prev) => ({
+        ...prev,
+        [activeMonth]: {
+          assets: apiData.assets as Group[],
+          liabilities: apiData.liabilities as Group[],
+          income: apiData.income as Group[],
+          expenses: apiData.expenses as Group[],
+        },
+      }));
+    });
+  }, [activeMonth]);
+
+  useEffect(() => {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      const m = activeMonth;
+      const data = store[m];
+      if (!data) return;
+      saveSheet(m, {
+        assets: data.assets as any,
+        liabilities: data.liabilities as any,
+        income: data.income as any,
+        expenses: data.expenses as any,
+      });
+    }, 2000);
+    return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
+  }, [store, activeMonth]);
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (monthPickerRef.current && !monthPickerRef.current.contains(e.target as Node)) {
