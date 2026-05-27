@@ -82,10 +82,10 @@ export async function saveSheet(
 ): Promise<boolean> {
   const payload = {
     month,
-    assets: sections.assets.map((g, i) => convertGroupToApi(g, i)),
-    liabilities: sections.liabilities.map((g, i) => convertGroupToApi(g, i)),
-    income: sections.income.map((g, i) => convertGroupToApi(g, i)),
-    expenses: sections.expenses.map((g, i) => convertGroupToApi(g, i)),
+    assets: (sections.assets ?? []).map((g, i) => convertGroupToApi(g, i)),
+    liabilities: (sections.liabilities ?? []).map((g, i) => convertGroupToApi(g, i)),
+    income: (sections.income ?? []).map((g, i) => convertGroupToApi(g, i)),
+    expenses: (sections.expenses ?? []).map((g, i) => convertGroupToApi(g, i)),
   };
   try {
     const res = await apiClient("/api/v1/balance-sheet", {

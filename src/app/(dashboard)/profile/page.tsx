@@ -10,6 +10,7 @@ import { navItems } from "@/components/icons";
 import { apiClient } from "@/lib/api";
 import { saveUserInfo, getAccessToken } from "@/lib/auth";
 import type { UserInfo } from "@/lib/auth";
+import { useUser } from "@/lib/user-context";
 
 const GENDER_LABELS = ["保密", "男", "女"];
 
@@ -26,6 +27,7 @@ function toTimestamp(dateStr: string): number {
 
 export default function ProfilePage() {
   const router = useRouter();
+  const { refreshUser } = useUser();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -110,6 +112,7 @@ export default function ProfilePage() {
         birthday: toTimestamp(form.birthday),
         bio: form.bio,
       });
+      refreshUser();
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch {
@@ -127,9 +130,11 @@ export default function ProfilePage() {
     }
     setAvatarUploading(true);
     try {
+      const formData = new FormData();
+      formData.append("file", file);
       const uploadRes = await apiClient("/api/v1/user/avatar/upload", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        body: formData,
       });
       const uploadBody = await uploadRes.json();
       if (uploadBody.code !== 0) {
@@ -142,21 +147,22 @@ export default function ProfilePage() {
         body: file,
         headers: { "Content-Type": file.type },
       });
+      const avatarUrl = presigned_url.split("?")[0];
       const confirmRes = await apiClient("/api/v1/user/avatar", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ avatar_url: presigned_url.split("?")[0], avatar_key: object_key }),
+        body: JSON.stringify({ avatar_url: avatarUrl, avatar_key: object_key }),
       });
       const confirmBody = await confirmRes.json();
       if (confirmBody.code !== 0) {
         setError(confirmBody.message || "确认头像失败");
         return;
       }
-      const avatarUrl = confirmBody.data?.avatar_url || presigned_url.split("?")[0];
       setProfile((prev) => prev ? { ...prev, avatar_url: avatarUrl } : prev);
       saveUserInfo({ nickname: form.nickname, email: form.email, avatar_url: avatarUrl });
       setPreviewUrl(null);
       setSuccess(true);
+      refreshUser();
       setTimeout(() => setSuccess(false), 3000);
     } catch {
       setError("头像上传失败，请稍后重试");
@@ -175,7 +181,6 @@ export default function ProfilePage() {
   function handleNavChange(key: string) {
     if (key === "home") router.push("/home");
     else if (key === "balance-sheet") router.push("/balance-sheet");
-    else if (key === "settings") router.push("/settings");
   }
 
   return (

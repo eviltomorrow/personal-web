@@ -9,24 +9,6 @@ import DashboardHeader from "@/components/dashboard-header";
 import { I, navItems } from "@/components/icons";
 import { useUser } from "@/lib/user-context";
 
-function Activity({ label, module, time, icon }: { label: string; module: string; time: string; icon: ReactNode }) {
-  return (
-    <div className="group flex items-start gap-3 border-b border-[#f0f0f0] pb-3 last:border-0 last:pb-0 transition-all duration-200 hover:opacity-80">
-      <div className="mt-0.5 flex h-7 w-7 items-center justify-center rounded-lg bg-[#f5f5f7] text-[11px] text-[#86868b] transition-all duration-200 group-hover:bg-[#0071e3]/10 group-hover:text-[#0071e3]">
-        {icon}
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-[13px] text-[#1d1d1f] truncate">{label}</p>
-        <div className="mt-0.5 flex items-center gap-2 text-[11px] text-[#86868b]">
-          <span className="font-medium text-[#6e6e73]">{module}</span>
-          <span className="text-[#d2d2d7]">·</span>
-          <span>{time}</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function FeatureCard({ icon, label, desc, onClick, gradient, accent }: {
   icon: ReactNode; label: string; desc: string; onClick?: () => void;
   gradient: string; accent: string;
@@ -63,14 +45,12 @@ export default function HomePage() {
   function handleNavChange(key: string) {
     if (key === "balance-sheet") {
       router.push("/balance-sheet");
-    } else if (key === "settings") {
-      router.push("/settings");
     }
   }
 
-  const nickname = user?.nickname || "大圣";
+  const nickname = user?.nickname || "";
   const avatarUrl = user?.avatar_url;
-  const initial = nickname.charAt(0).toUpperCase();
+  const initial = nickname ? nickname.charAt(0).toUpperCase() : "U";
 
   const now = new Date();
   const h = now.getHours();
@@ -181,10 +161,9 @@ export default function HomePage() {
                 <div className="mb-4 flex items-center justify-between">
                   <h2 className="text-[15px] font-semibold text-[#1d1d1f]">最近动态</h2>
                 </div>
-                <div className="space-y-3">
-                  <Activity label="更新了个人资料" module="账户" time="2 小时前" icon={I.User} />
-                  <Activity label="查看了资产负债表" module="资产负债" time="昨天 15:30" icon={I.Chart} />
-                  <Activity label="登录了系统" module="账户" time="2026-05-27" icon={I.Clock} />
+                <div className="flex flex-col items-center justify-center py-10 text-[13px] text-[#d2d2d7]">
+                  {I.Clock}
+                  <span className="mt-2">暂无动态</span>
                 </div>
               </div>
 
@@ -212,16 +191,7 @@ export default function HomePage() {
                       <p className="text-[11px] text-[#86868b]">修改昵称和头像</p>
                     </div>
                   </button>
-                  <button onClick={() => router.push("/settings")}
-                    className="group flex items-center gap-3 rounded-xl px-4 py-3 transition-all duration-200 hover:bg-[#f5f5f7] cursor-pointer w-full text-left">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#ff9f0a]/10 text-[#ff9f0a] transition-all duration-200 group-hover:scale-105">
-                      {I.Gear}
-                    </div>
-                    <div>
-                      <p className="text-[13px] font-medium text-[#1d1d1f]">系统设置</p>
-                      <p className="text-[11px] text-[#86868b]">账户与偏好设置</p>
-                    </div>
-                  </button>
+
                 </div>
               </div>
             </div>
@@ -230,7 +200,7 @@ export default function HomePage() {
             <div className="mt-12 text-center">
               <div className="inline-flex items-center gap-3 rounded-full bg-white/80 px-5 py-2 text-[11px] text-[#d2d2d7] border border-[#e8e8ed]/60 shadow-sm">
                 <span className="flex h-2 w-2 rounded-full bg-[#30b94e]" />
-                liarsa · 个人系统 · v0.1.0
+                personal system
               </div>
             </div>
           </div>

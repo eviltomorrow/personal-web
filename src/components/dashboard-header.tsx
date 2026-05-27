@@ -20,9 +20,9 @@ export default function DashboardHeader({
   const { user } = useUser();
   const menuRef = useRef<HTMLDivElement>(null);
   const bellRef = useRef<HTMLDivElement>(null);
-  const nickname = user?.nickname || "大圣";
+  const nickname = user?.nickname || "";
   const avatarUrl = user?.avatar_url;
-  const initial = nickname.charAt(0).toUpperCase();
+  const initial = nickname ? nickname.charAt(0).toUpperCase() : "U";
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -71,9 +71,6 @@ export default function DashboardHeader({
             className="relative flex h-8 w-8 items-center justify-center rounded-full text-[#86868b] transition-all duration-200 hover:bg-[#f5f5f7] hover:text-[#6e6e73] cursor-pointer"
           >
             {I.Bell}
-            <span className="absolute -right-0.5 -top-0.5 flex h-4.5 w-4.5 min-w-[18px] items-center justify-center rounded-full bg-[#ff3b30] text-[10px] font-bold text-white ring-2 ring-white px-1">
-              3
-            </span>
           </button>
 
           {bellOpen && (
@@ -82,25 +79,10 @@ export default function DashboardHeader({
                 <p className="text-[13px] font-semibold text-[#1d1d1f]">通知</p>
               </div>
               <div className="max-h-64 overflow-y-auto">
-                {[
-                  { title: "新笔记已同步", desc: "笔记「Go 并发编程实践」已成功同步到云端", time: "2 分钟前" },
-                  { title: "项目部署完成", desc: "项目「个人网站重构」已成功部署", time: "1 小时前" },
-                  { title: "系统更新提醒", desc: "新版本 v0.2.0 已发布，点击查看详情", time: "3 小时前" },
-                  ].map((n, i) => (
-                  <button key={i} className="flex w-full flex-col gap-0.5 border-b border-[#f5f5f7] px-4 py-3 text-left transition-all duration-200 hover:bg-[#f5f5f7] last:border-0 cursor-pointer">
-                    <div className="flex items-center gap-2">
-                      <span className="h-1.5 w-1.5 rounded-full bg-[#0071e3] flex-shrink-0" />
-                      <span className="text-[12px] font-medium text-[#1d1d1f]">{n.title}</span>
-                    </div>
-                    <p className="text-[11px] text-[#86868b] pl-3.5">{n.desc}</p>
-                    <span className="text-[10px] text-[#d2d2d7] pl-3.5">{n.time}</span>
-                  </button>
-                ))}
-              </div>
-              <div className="border-t border-[#f5f5f7] px-4 py-2">
-                <button className="w-full text-center text-[11px] font-medium text-[#0071e3] transition-colors hover:text-[#0077ed] cursor-pointer">
-                  查看全部通知 →
-                </button>
+                <div className="flex flex-col items-center justify-center py-10 text-[13px] text-[#d2d2d7]">
+                  {I.Bell}
+                  <span className="mt-2">暂无通知</span>
+                </div>
               </div>
             </div>
           )}
@@ -128,12 +110,6 @@ export default function DashboardHeader({
               >
                 {I.User}
                 个人信息
-              </button>
-              <button onClick={() => { setDropdownOpen(false); router.push("/settings"); }}
-                className="flex w-full items-center gap-2 px-4 py-2.5 text-[13px] text-[#1d1d1f] transition-all duration-200 hover:bg-[#f5f5f7] cursor-pointer"
-              >
-                {I.Gear}
-                设置
               </button>
               <div className="border-t border-[#f5f5f7] mt-1 pt-1">
                 <button onClick={handleLogout}

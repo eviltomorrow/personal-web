@@ -281,7 +281,6 @@ export default function BalanceSheetPage() {
   useEffect(() => {
     fetchSheet(activeMonth).then((apiData) => {
       if (!apiData) return;
-      if (apiData.assets.length === 0 && apiData.liabilities.length === 0 && apiData.income.length === 0 && apiData.expenses.length === 0) return;
       setStore((prev) => ({
         ...prev,
         [activeMonth]: {
@@ -321,7 +320,6 @@ export default function BalanceSheetPage() {
 
   function handleNavChange(key: string) {
     if (key === "home") router.push("/home");
-    else if (key === "settings") router.push("/settings");
   }
 
   function ensureMonth(m: string): SheetData {

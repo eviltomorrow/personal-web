@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { saveTokens, saveUserInfo } from "@/lib/auth";
+import { saveTokens, saveUserInfo, getAccessToken } from "@/lib/auth";
+import { useUser } from "@/lib/user-context";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { refreshUser } = useUser();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -41,10 +43,17 @@ export default function LoginPage() {
         expiresIn: body.data.expires_in,
       });
 
-      saveUserInfo({
-        nickname: email.split("@")[0],
-        email,
-      });
+      fetch("/api/v1/user/profile", {
+        headers: { Authorization: `Bearer ${body.data.access_token}` },
+      })
+        .then((r) => r.json())
+        .then((pb) => {
+          if (pb.code === 0 && pb.data) {
+            saveUserInfo(pb.data);
+            refreshUser();
+          }
+        })
+        .catch(() => {});
 
       router.push("/home");
     } catch {

@@ -34,7 +34,6 @@ export default function SettingsPage() {
               {I.Gear}
             </div>
             <p className="text-[15px] font-medium text-[#86868b]">设置</p>
-            <p className="mt-1 text-[13px] text-[#d2d2d7]">功能开发中，敬请期待</p>
           </div>
         </main>
       </div>
