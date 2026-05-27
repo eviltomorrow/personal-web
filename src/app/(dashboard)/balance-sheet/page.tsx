@@ -336,6 +336,7 @@ export default function BalanceSheetPage() {
   const [confirmAction, setConfirmAction] = useState<{ msg: string; onConfirm: () => void } | null>(null);
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [showMom, setShowMom] = useState(false);
   const monthPickerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { saveStore(store); }, [store]);
@@ -997,6 +998,12 @@ export default function BalanceSheetPage() {
           </svg>
           <span className="tracking-wider">表格</span>
         </button>
+        <button onClick={() => setShowMom(true)}
+          className="flex flex-row items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-medium text-[#6e6e73] transition-all duration-200 hover:bg-[#0071e3] hover:text-white hover:shadow-sm cursor-pointer bg-[#0071e3]/5"
+          title="生成环比对比">
+          <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth="1.5"><path d="M2 4h16v12H2z" /><path d="M6 2v4m8-4v4M2 10h16" /><path d="M6 14l3-3 3 2 4-4" /></svg>
+          <span className="tracking-wider">环比</span>
+        </button>
       </div>
 
       {/* ── Floating Income & Expenses ── */}
@@ -1071,6 +1078,86 @@ export default function BalanceSheetPage() {
           </div>
         </div>
       )}
+
+      {/* ── MoM Comparison Modal ── */}
+      {showMom && (() => {
+        const prevM = prevMonth(activeMonth);
+        const prevSheet = store[prevM] ? { ...defaultSheet(), ...store[prevM] } : null;
+        const prevTotalAssets = prevSheet ? prevSheet.assets.reduce((s, g) => s + totalGroup(g), 0) : 0;
+        const prevTotalLiabilities = prevSheet ? prevSheet.liabilities.reduce((s, g) => s + totalGroup(g), 0) : 0;
+        const prevTotalIncome = prevSheet ? prevSheet.income.reduce((s, g) => s + totalGroup(g), 0) : 0;
+        const prevTotalExpenses = prevSheet ? prevSheet.expenses.reduce((s, g) => s + totalGroup(g), 0) : 0;
+        const rows = [
+          { label: "总资产", current: totalAssets, prev: prevTotalAssets, color: "text-[#34c759]" },
+          { label: "总负债", current: totalLiabilities, prev: prevTotalLiabilities, color: "text-red-500" },
+          { label: "净资产", current: netWorth, prev: prevTotalAssets - prevTotalLiabilities, color: "text-[#1d1d1f]" },
+          { label: "总收入", current: totalIncome, prev: prevTotalIncome, color: "text-green-600" },
+          { label: "总开支", current: totalExpenses, prev: prevTotalExpenses, color: "text-orange-600" },
+          { label: "结余", current: totalIncome - totalExpenses, prev: prevTotalIncome - prevTotalExpenses, color: "" },
+        ];
+        function diffPct(c: number, p: number): string {
+          if (p === 0) return c > 0 ? "+∞" : c === 0 ? "0.0%" : "-∞";
+          return ((c - p) / p * 100).toFixed(1) + "%";
+        }
+        return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/15 px-4 py-8 backdrop-blur-sm"
+          onClick={() => setShowMom(false)}>
+          <div className="flex max-h-[85vh] w-full max-w-[600px] flex-col rounded-2xl bg-white shadow-2xl ring-1 ring-black/[0.04]"
+            onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between shrink-0 px-8 pt-8 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#0071e3]/10 text-[#0071e3]">
+                  <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth="1.5"><path d="M2 4h16v12H2z" /><path d="M6 2v4m8-4v4M2 10h16" /><path d="M6 14l3-3 3 2 4-4" /></svg>
+                </div>
+                <h2 className="text-[18px] font-semibold text-[#1d1d1f]">环比对比</h2>
+                <span className="rounded-full bg-[#f5f5f7] px-3 py-1 text-[11px] font-medium text-[#86868b]">{monthLabel(prevM)} → {monthLabel(activeMonth)}</span>
+              </div>
+              <button onClick={() => setShowMom(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-full text-[#86868b] transition-colors hover:bg-[#f0f0f0] cursor-pointer">
+                <svg viewBox="0 0 16 16" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth="1.5"><path d="M4 4l8 8M12 4l-8 8" /></svg>
+              </button>
+            </div>
+            <div className="overflow-y-auto px-8 pb-8">
+              <table className="w-full border-separate border-spacing-0">
+                <thead>
+                  <tr>
+                    <th className="pb-3 pr-6 text-left text-[13px] font-semibold text-[#1d1d1f] border-b border-[#e8e8ed]">项目</th>
+                    <th className="pb-3 pr-6 text-right text-[13px] font-semibold text-[#1d1d1f] border-b border-[#e8e8ed]">本月</th>
+                    <th className="pb-3 pr-6 text-right text-[13px] font-semibold text-[#6e6e73] border-b border-[#e8e8ed]">上月</th>
+                    <th className="pb-3 pr-6 text-right text-[13px] font-semibold text-[#6e6e73] border-b border-[#e8e8ed]">差额</th>
+                    <th className="pb-3 text-right text-[13px] font-semibold text-[#6e6e73] border-b border-[#e8e8ed]">环比</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((r, i) => {
+                    const diff = r.current - r.prev;
+                    const isLast = i === rows.length - 1;
+                    return (
+                      <tr key={r.label} className={isLast ? "" : "border-b border-[#f0f0f2]"}>
+                        <td className={`py-3 pr-6 text-[14px] ${r.color || "text-[#1d1d1f]"} font-medium`}>{r.label}</td>
+                        <td className={`py-3 pr-6 text-right tabular-nums text-[14px] ${r.color || "text-[#1d1d1f]"}`}>{fmt(r.current)}</td>
+                        <td className={`py-3 pr-6 text-right tabular-nums text-[14px] text-[#6e6e73]`}>{prevSheet ? fmt(r.prev) : "-"}</td>
+                        <td className={`py-3 pr-6 text-right tabular-nums text-[14px] ${diff >= 0 ? "text-green-600" : "text-red-500"}`}>
+                          {prevSheet ? (diff >= 0 ? "+" : "") + fmt(Math.abs(diff)) : "-"}
+                        </td>
+                        <td className={`py-3 text-right tabular-nums text-[14px] font-medium ${r.current - r.prev >= 0 ? "text-green-600" : "text-red-500"}`}>
+                          {prevSheet ? diffPct(r.current, r.prev) : "-"}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              {!prevSheet && (
+                <div className="mt-6 text-center text-[13px] text-[#86868b] bg-[#f5f5f7] rounded-xl py-4">
+                  暂无 {monthLabel(prevM)} 的数据，无法进行环比对比
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+        );
+      })()}
 
       {/* ── Add Group Modal ── */}
       {showAddGroup && (
