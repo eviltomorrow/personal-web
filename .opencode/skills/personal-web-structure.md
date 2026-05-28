@@ -22,8 +22,8 @@ src/
 │   │   └── page.tsx            # `/home` 后台首页 (HomePage) — "use client"
 │   ├── register/
 │   │   └── page.tsx            # `/register` 注册页 (RegisterPage) — "use client"
-│   └── balance-sheet/
-│       └── page.tsx            # `/balance-sheet` 资产负债表 — "use client"
+│   └── assets-and-liabilities/
+│       └── page.tsx            # `/assets-and-liabilities` 资产与负债 — "use client"
 ├── components/
 │   ├── sidebar.tsx             # 左侧可折叠导航栏 (品牌 + 导航项 + 收起/展开)
 │   ├── dashboard-header.tsx    # 顶部导航栏 (面包屑 + 搜索 + 通知 + 用户菜单)
@@ -67,7 +67,7 @@ src/
 - **最近活动**: 3 条静态活动记录
 - **快捷操作**: 4 个按钮 (写文章/新建项目/查看统计/系统设置)
 
-### `/balance-sheet` — 资产负债表 (`balance-sheet/page.tsx`)
+### `/assets-and-liabilities` — 资产与负债 (`assets-and-liabilities/page.tsx`)
 - Client Component (`"use client"`)
 - 顶部导航 + 浮动侧边栏（与 `/home` 一致）
 - 卡片布局

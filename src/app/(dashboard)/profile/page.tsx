@@ -180,7 +180,7 @@ export default function ProfilePage() {
 
   function handleNavChange(key: string) {
     if (key === "home") router.push("/home");
-    else if (key === "balance-sheet") router.push("/balance-sheet");
+    else if (key === "balance-sheet") router.push("/assets-and-liabilities");
   }
 
   return (

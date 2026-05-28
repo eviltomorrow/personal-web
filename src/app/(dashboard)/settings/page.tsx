@@ -13,7 +13,7 @@ export default function SettingsPage() {
     if (key === "home") {
       router.push("/home");
     } else if (key === "balance-sheet") {
-      router.push("/balance-sheet");
+      router.push("/assets-and-liabilities");
     }
   }
 

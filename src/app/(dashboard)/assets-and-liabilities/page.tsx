@@ -274,6 +274,7 @@ export default function BalanceSheetPage() {
   const [showPreview, setShowPreview] = useState(false);
   const [showMom, setShowMom] = useState(false);
   const monthPickerRef = useRef<HTMLDivElement>(null);
+  const [calendarYear, setCalendarYear] = useState(() => new Date().getFullYear());
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => { saveStore(store); }, [store]);
@@ -308,6 +309,11 @@ export default function BalanceSheetPage() {
     }, 2000);
     return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
   }, [store, activeMonth]);
+  useEffect(() => {
+    if (showMonthPicker) {
+      setCalendarYear(parseInt(activeMonth.slice(0, 4)));
+    }
+  }, [showMonthPicker]);
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (monthPickerRef.current && !monthPickerRef.current.contains(e.target as Node)) {
@@ -859,7 +865,7 @@ export default function BalanceSheetPage() {
           <div className="mb-6 flex items-start justify-between">
             <div>
               <div className="flex items-center gap-3">
-                <h1 className="text-[26px] font-semibold tracking-[-0.02em] text-[#1d1d1f]">个人资产负债表</h1>
+                <h1 className="text-[26px] font-semibold tracking-[-0.02em] text-[#1d1d1f]">资产与负债</h1>
                 <span className="rounded-full bg-[#0071e3]/10 px-2.5 py-0.5 text-[10px] font-medium text-[#0071e3]">
                   {sheet.assets.length + sheet.liabilities.length + sheet.income.length + sheet.expenses.length} 组 · {sheet.assets.reduce((s, g) => s + g.entries.length, 0) + sheet.liabilities.reduce((s, g) => s + g.entries.length, 0) + sheet.income.reduce((s, g) => s + g.entries.length, 0) + sheet.expenses.reduce((s, g) => s + g.entries.length, 0)} 项
                 </span>
@@ -879,12 +885,14 @@ export default function BalanceSheetPage() {
           </div>
 
           {/* ── Month Picker + Net Worth ── */}
-          <div className="relative mb-6 overflow-hidden rounded-3xl border border-[#e8e8ed]/80 bg-white shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
-            <div className="absolute inset-0 bg-gradient-to-br from-[#0071e3]/5 via-white to-[#34c759]/5" />
+          <div className="relative mb-6 rounded-3xl border border-[#e8e8ed]/80 bg-white shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+            <div className="absolute inset-0 overflow-hidden rounded-3xl">
+              <div className="absolute inset-0 bg-gradient-to-br from-[#0071e3]/5 via-white to-[#34c759]/5" />
+            </div>
             <div className="relative">
 
               {/* Month Selector */}
-              <div className="flex items-center justify-center pt-5 pb-3" ref={monthPickerRef}>
+              <div className="relative flex items-center justify-center pt-5 pb-3" ref={monthPickerRef}>
                 <button onClick={goPrevMonth}
                   className="flex h-8 w-8 items-center justify-center rounded-full text-[#86868b] transition-all duration-200 hover:bg-[#f5f5f7] hover:text-[#1d1d1f] cursor-pointer">
                   {I.ChevronL}
@@ -900,21 +908,34 @@ export default function BalanceSheetPage() {
                 </button>
 
                 {showMonthPicker && (
-                  <div className="absolute top-full mt-1 z-50 w-56 rounded-2xl border border-[#d2d2d7]/80 bg-white/95 py-2 shadow-lg backdrop-blur-xl max-h-60 overflow-y-auto">
-                    {months.length === 0 ? (
-                      <div className="px-4 py-3 text-[13px] text-[#86868b]">暂无其他月份数据</div>
-                    ) : (
-                      months.map((m) => (
-                        <button key={m} onClick={() => { setActiveMonth(m); setShowMonthPicker(false); }}
-                          className={`flex w-full items-center gap-2 px-4 py-2.5 text-[13px] text-left transition-all duration-200 hover:bg-[#f5f5f7] cursor-pointer ${
-                            m === activeMonth ? "font-medium text-[#0071e3] bg-[#0071e3]/5" : "text-[#1d1d1f]"
-                          }`}>
-                          <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 shrink-0" stroke="currentColor" strokeWidth="1.5"><path d="M3 4h14a1 1 0 011 1v11a1 1 0 01-1 1H3a1 1 0 01-1-1V5a1 1 0 011-1zM3 8h14M7 2v3m6-3v3" /></svg>
-                          {monthLabel(m)}
-                          {m === activeMonth && <span className="ml-auto text-[10px] text-[#0071e3]">当前</span>}
-                        </button>
-                      ))
-                    )}
+                  <div className="absolute top-full mt-1 z-50 w-64 rounded-2xl border border-[#d2d2d7]/80 bg-white/95 p-4 shadow-lg backdrop-blur-xl">
+                    <div className="flex items-center justify-between mb-3">
+                      <button onClick={() => setCalendarYear(y => y - 1)}
+                        className="flex h-7 w-7 items-center justify-center rounded-full text-[#86868b] hover:bg-[#f5f5f7] hover:text-[#1d1d1f] cursor-pointer transition-all duration-200">
+                        {I.ChevronL}
+                      </button>
+                      <span className="text-[14px] font-semibold text-[#1d1d1f]">{calendarYear} 年</span>
+                      <button onClick={() => setCalendarYear(y => y + 1)}
+                        className="flex h-7 w-7 items-center justify-center rounded-full text-[#86868b] hover:bg-[#f5f5f7] hover:text-[#1d1d1f] cursor-pointer transition-all duration-200">
+                        <span className="rotate-180">{I.ChevronL}</span>
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-3 gap-1">
+                      {Array.from({ length: 12 }, (_, i) => {
+                        const m = `${calendarYear}-${String(i + 1).padStart(2, "0")}`;
+                        const isActive = m === activeMonth;
+                        return (
+                          <button key={m} onClick={() => { setActiveMonth(m); setShowMonthPicker(false); }}
+                            className={`rounded-lg px-2 py-2.5 text-[13px] text-center transition-all duration-200 cursor-pointer ${
+                              isActive
+                                ? "bg-[#0071e3] text-white font-medium shadow-sm"
+                                : "text-[#1d1d1f] hover:bg-[#f5f5f7]"
+                            }`}>
+                            {i + 1} 月
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
               </div>

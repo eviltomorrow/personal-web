@@ -44,7 +44,7 @@ export default function HomePage() {
 
   function handleNavChange(key: string) {
     if (key === "balance-sheet") {
-      router.push("/balance-sheet");
+      router.push("/assets-and-liabilities");
     }
   }
 
@@ -121,9 +121,9 @@ export default function HomePage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <FeatureCard
                     icon={I.Chart}
-                    label="资产负债表"
+                    label="资产与负债"
                     desc="查看企业的财务状况概览，包括资产、负债和所有者权益"
-                    onClick={() => router.push("/balance-sheet")}
+                    onClick={() => router.push("/assets-and-liabilities")}
                     gradient="from-[#34c759]/10 via-[#68d88b]/5 to-transparent"
                     accent="text-[#34c759] bg-[#34c759]/10"
                   />
@@ -171,13 +171,13 @@ export default function HomePage() {
               <div className="rounded-2xl border border-[#e8e8ed]/80 bg-white p-5 shadow-[0_1px_4px_rgba(0,0,0,0.04)] lg:col-span-2 transition-all duration-200 hover:shadow-md">
                 <h2 className="mb-4 text-[15px] font-semibold text-[#1d1d1f]">快捷操作</h2>
                 <div className="flex flex-col gap-1">
-                  <button onClick={() => router.push("/balance-sheet")}
+                  <button onClick={() => router.push("/assets-and-liabilities")}
                     className="group flex items-center gap-3 rounded-xl px-4 py-3 transition-all duration-200 hover:bg-[#f5f5f7] cursor-pointer w-full text-left">
                     <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#34c759]/10 text-[#34c759] transition-all duration-200 group-hover:scale-105">
                       {I.Chart}
                     </div>
                     <div>
-                      <p className="text-[13px] font-medium text-[#1d1d1f]">查看资产负债表</p>
+                      <p className="text-[13px] font-medium text-[#1d1d1f]">查看资产与负债</p>
                       <p className="text-[11px] text-[#86868b]">财务状况概览</p>
                     </div>
                   </button>
