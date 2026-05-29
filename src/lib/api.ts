@@ -248,6 +248,9 @@ export const financeApi = {
   createTransactionCategory(data: { name: string; type: number; icon?: string; sort_order?: number }): Promise<{ category_id: string }> {
     return request("POST", "/finance/transaction-categories", data);
   },
+  updateTransactionCategory(categoryId: string, data: { name?: string; icon?: string; sort_order?: number }) {
+    return request("PUT", `/finance/transaction-categories/${categoryId}`, data);
+  },
   deleteTransactionCategory(categoryId: string) {
     return request("DELETE", `/finance/transaction-categories/${categoryId}`);
   },
@@ -265,6 +268,9 @@ export const financeApi = {
   },
   createTransaction(data: { category_id: string; type: number; amount: number; transaction_date: number; description?: string; notes?: string; currency?: string }): Promise<{ transaction_id: string }> {
     return request("POST", "/finance/transactions", { currency: "CNY", ...data });
+  },
+  updateTransaction(transactionId: string, data: { amount?: number; description?: string; currency?: string; notes?: string }) {
+    return request("PUT", `/finance/transactions/${transactionId}`, data);
   },
   deleteTransaction(transactionId: string) {
     return request("DELETE", `/finance/transactions/${transactionId}`);

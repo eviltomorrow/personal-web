@@ -14,6 +14,9 @@ interface Entry {
   code?: string;
   quantity?: number;
   sort_order?: number;
+  asset_id?: string;
+  liability_id?: string;
+  transaction_id?: string;
 }
 
 interface Group {
@@ -127,11 +130,6 @@ async function loadFromAPI(): Promise<SheetData | null> {
       financeApi.listTransactionCategories(2),
     ]);
 
-    const assetIds = assetCats.categories.map((c) => c.category_id);
-    const liabilityIds = liabilityCats.categories.map((c) => c.category_id);
-    const incomeIds = incomeCats.categories.map((c) => c.category_id);
-    const expenseIds = expenseCats.categories.map((c) => c.category_id);
-
     const [assetsRes, liabilitiesRes] = await Promise.all([
       financeApi.listAssets(),
       financeApi.listLiabilities(),
@@ -148,30 +146,55 @@ async function loadFromAPI(): Promise<SheetData | null> {
 
     function buildGroups(
       cats: { category_id: string; name: string; sort_order: number }[],
-      items: { category_id: string; name: string; amount: number }[],
+      items: { category_id: string; name: string; amount: number; asset_id?: string; liability_id?: string; transaction_id?: string }[],
       typeVal: string,
     ): Group[] {
-      return cats.map((cat, i) => ({
+      const matchedCatIds = new Set(cats.map((c) => c.category_id));
+      const unmatched = items.filter((it) => !matchedCatIds.has(it.category_id));
+      const pickId = (it: typeof items[number]): string =>
+        it.asset_id || it.liability_id || it.transaction_id || `${it.category_id}_0`;
+      const groups = cats.map((cat) => ({
         id: cat.category_id,
         label: cat.name,
         type: typeVal,
         sort_order: cat.sort_order,
         entries: items
           .filter((it) => it.category_id === cat.category_id)
-          .map((it, ei) => ({
-            id: `${cat.category_id}_${ei}`,
+          .map((it) => ({
+            id: pickId(it),
             name: it.name,
             amount: it.amount,
-            sort_order: ei,
+            sort_order: 0,
+            asset_id: it.asset_id,
+            liability_id: it.liability_id,
+            transaction_id: it.transaction_id,
           })),
       }));
+      if (unmatched.length > 0) {
+        groups.push({
+          id: `orphan_${typeVal}`,
+          label: "其他",
+          type: typeVal,
+          sort_order: groups.length,
+          entries: unmatched.map((it) => ({
+            id: pickId(it),
+            name: it.name,
+            amount: it.amount,
+            sort_order: 0,
+            asset_id: it.asset_id,
+            liability_id: it.liability_id,
+            transaction_id: it.transaction_id,
+          })),
+        });
+      }
+      return groups;
     }
 
     return {
-      assets: buildGroups(assetCats.categories, assetsRes.assets, "cash"),
-      liabilities: buildGroups(liabilityCats.categories, liabilitiesRes.liabilities, "loan"),
-      income: buildGroups(incomeCats.categories, incomeTxRes.transactions.map((t) => ({ ...t, name: t.description })), "income"),
-      expenses: buildGroups(expenseCats.categories, expenseTxRes.transactions.map((t) => ({ ...t, name: t.description })), "expense"),
+      assets: buildGroups(assetCats.categories ?? [], assetsRes.assets ?? [], "cash"),
+      liabilities: buildGroups(liabilityCats.categories ?? [], liabilitiesRes.liabilities ?? [], "loan"),
+      income: buildGroups(incomeCats.categories ?? [], (incomeTxRes.transactions ?? []).map((t) => ({ ...t, name: t.description })), "income"),
+      expenses: buildGroups(expenseCats.categories ?? [], (expenseTxRes.transactions ?? []).map((t) => ({ ...t, name: t.description })), "expense"),
     };
   } catch {
     return null;
@@ -233,6 +256,46 @@ async function syncEntryToAPI(section: Section, categoryId: string, entry: Entry
         await financeApi.deleteLiability(entry.id);
         return null;
       }
+    }
+  } catch { /* background sync, ignore */ }
+  return null;
+}
+
+async function syncTransactionToAPI(type: 1 | 2, categoryId: string, entry: Entry, action: "create" | "update" | "delete"): Promise<string | null> {
+  if (!isLoggedIn()) return null;
+  try {
+    if (action === "create") {
+      const res = await financeApi.createTransaction({
+        category_id: categoryId,
+        type,
+        amount: entry.amount,
+        transaction_date: Math.floor(Date.now() / 1000),
+        description: entry.name,
+      });
+      return res.transaction_id;
+    } else if (action === "update") {
+      await financeApi.updateTransaction(entry.id, { amount: entry.amount, description: entry.name });
+      return entry.id;
+    } else if (action === "delete") {
+      await financeApi.deleteTransaction(entry.id);
+      return null;
+    }
+  } catch { /* background sync, ignore */ }
+  return null;
+}
+
+async function syncTransactionCategoryToAPI(apiType: 1 | 2, group: Group, action: "create" | "update" | "delete"): Promise<string | null> {
+  if (!isLoggedIn()) return null;
+  try {
+    if (action === "create") {
+      const res = await financeApi.createTransactionCategory({ name: group.label, type: apiType, sort_order: group.sort_order || 0 });
+      return res.category_id;
+    } else if (action === "update") {
+      await financeApi.updateTransactionCategory(group.id, { name: group.label, sort_order: group.sort_order });
+      return group.id;
+    } else if (action === "delete") {
+      await financeApi.deleteTransactionCategory(group.id);
+      return null;
     }
   } catch { /* background sync, ignore */ }
   return null;
@@ -399,7 +462,6 @@ export default function BalanceSheetPage() {
   const monthPickerRef = useRef<HTMLDivElement>(null);
   const [calendarYear, setCalendarYear] = useState(() => new Date().getFullYear());
   const syncedIdsRef = useRef<Set<string>>(new Set());
-  const pendingDeletionsRef = useRef<{ section: Section; categoryId: string; id: string; type: "group" | "entry" }[]>([]);
   useEffect(() => {
     const saved = loadStore();
     const month = currentMonth();
@@ -414,6 +476,8 @@ export default function BalanceSheetPage() {
         const ids = new Set<string>();
         for (const g of apiData.assets) { ids.add(g.id); for (const e of g.entries) ids.add(e.id); }
         for (const g of apiData.liabilities) { ids.add(g.id); for (const e of g.entries) ids.add(e.id); }
+        for (const g of apiData.income) { if (!g.id.startsWith("orphan_")) ids.add(g.id); for (const e of g.entries) { ids.add(e.id); if (e.transaction_id) ids.add(e.transaction_id); } }
+        for (const g of apiData.expenses) { if (!g.id.startsWith("orphan_")) ids.add(g.id); for (const e of g.entries) { ids.add(e.id); if (e.transaction_id) ids.add(e.transaction_id); } }
         syncedIdsRef.current = ids;
       }
       setStore(saved);
@@ -423,84 +487,6 @@ export default function BalanceSheetPage() {
   useEffect(() => {
     saveStore(store);
   }, [store]);
-
-  const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isSyncingRef = useRef(false);
-  useEffect(() => {
-    if (!isLoggedIn() || !ready) return;
-    if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
-    syncTimerRef.current = setTimeout(async () => {
-      if (isSyncingRef.current) return;
-      isSyncingRef.current = true;
-      try {
-        const d = store[activeMonth];
-        if (!d) return;
-
-        const deletions = pendingDeletionsRef.current.splice(0);
-        for (const del of deletions) {
-          if (syncedIdsRef.current.has(del.id)) {
-            if (del.type === "group") {
-              await syncGroupToAPI(del.section, { id: del.id, label: "", type: "", entries: [], sort_order: 0 }, "delete");
-            } else {
-              await syncEntryToAPI(del.section, del.categoryId, { id: del.id, name: "", amount: 0 }, "delete");
-            }
-            syncedIdsRef.current.delete(del.id);
-          }
-        }
-
-        for (const section of ["assets", "liabilities"] as Section[]) {
-          const groups = getGroups(d, section);
-          for (const g of groups) {
-            if (!syncedIdsRef.current.has(g.id)) {
-              const newId = await syncGroupToAPI(section, g, "create");
-              if (newId && newId !== g.id) {
-                syncedIdsRef.current.add(newId);
-                setStore(prev => {
-                  const data = prev[activeMonth];
-                  if (!data) return prev;
-                  if (section === "assets") {
-                    const grp = data.assets.find(gr => gr.id === g.id);
-                    if (grp) grp.id = newId;
-                  } else {
-                    const grp = data.liabilities.find(gr => gr.id === g.id);
-                    if (grp) grp.id = newId;
-                  }
-                  return { ...prev };
-                });
-              }
-            } else {
-              await syncGroupToAPI(section, g, "update");
-            }
-
-            for (const e of g.entries) {
-              if (!syncedIdsRef.current.has(e.id)) {
-                const newId = await syncEntryToAPI(section, g.id, e, "create");
-                if (newId && newId !== e.id) {
-                  syncedIdsRef.current.add(newId);
-                  setStore(prev => {
-                    const data = prev[activeMonth];
-                    if (!data) return prev;
-                    const groups = section === "assets" ? data.assets : data.liabilities;
-                    const grp = groups.find(gr => gr.id === g.id);
-                    if (grp) {
-                      const entry = grp.entries.find(en => en.id === e.id);
-                      if (entry) entry.id = newId;
-                    }
-                    return { ...prev };
-                  });
-                }
-              } else {
-                await syncEntryToAPI(section, g.id, e, "update");
-              }
-            }
-          }
-        }
-      } finally {
-        isSyncingRef.current = false;
-      }
-    }, 5000);
-    return () => { if (syncTimerRef.current) clearTimeout(syncTimerRef.current); };
-  }, [store, activeMonth, ready]);
 
 
   useEffect(() => {
@@ -587,40 +573,74 @@ export default function BalanceSheetPage() {
   function saveEdit() {
     if (editEntry) {
       const { section, groupIdx, entryIdx } = editEntry;
+      const groups = getGroups(sheet, section);
+      const entry = groups[groupIdx]?.entries[entryIdx];
+      const catId = groups[groupIdx]?.id || "";
       applyEdit(section, (groups) => {
-        const entry = groups[groupIdx]?.entries[entryIdx];
-        if (entry) {
-          entry.name = editForm.name || entry.name;
-          entry.amount = parseFloat(editForm.amount) || 0;
-          entry.code = editForm.code || undefined;
-          entry.quantity = editForm.quantity ? parseFloat(editForm.quantity) : undefined;
+        const e = groups[groupIdx]?.entries[entryIdx];
+        if (e) {
+          e.name = editForm.name || e.name;
+          e.amount = parseFloat(editForm.amount) || 0;
+          e.code = editForm.code || undefined;
+          e.quantity = editForm.quantity ? parseFloat(editForm.quantity) : undefined;
         }
       });
       setEditEntry(null);
+
+      if (entry && isLoggedIn() && (section === "assets" || section === "liabilities")) {
+        syncEntryToAPI(section, catId, {
+          ...entry, name: editForm.name || entry.name, amount: parseFloat(editForm.amount) || 0,
+          code: editForm.code || undefined, quantity: editForm.quantity ? parseFloat(editForm.quantity) : undefined,
+        }, "update");
+      }
     } else if (addingTo) {
       const { section, groupIdx } = addingTo;
+      const groups = getGroups(sheet, section);
+      const g = groups[groupIdx];
+      const tempId = genId();
       applyEdit(section, (groups) => {
-        const g = groups[groupIdx];
-        if (g) {
-          g.entries.push({
-            id: genId(),
-            name: editForm.name || "新条目",
-            amount: parseFloat(editForm.amount) || 0,
-            code: editForm.code || undefined,
-            quantity: editForm.quantity ? parseFloat(editForm.quantity) : undefined,
-          });
+        const grp = groups[groupIdx];
+        if (grp) {
+          grp.entries.push({ id: tempId, name: editForm.name || "新条目", amount: parseFloat(editForm.amount) || 0, code: editForm.code || undefined, quantity: editForm.quantity ? parseFloat(editForm.quantity) : undefined });
         }
       });
       setAddingTo(null);
+
+      if (g && isLoggedIn()) {
+        const catId = g.id;
+        if (!catId.startsWith("e_")) {
+          syncEntryToAPI(section, catId, { id: tempId, name: editForm.name || "新条目", amount: parseFloat(editForm.amount) || 0, code: editForm.code, quantity: editForm.quantity ? parseFloat(editForm.quantity) : undefined }, "create").then((newId) => {
+            if (newId) {
+              syncedIdsRef.current.add(newId);
+              setStore(prev => {
+                const data = prev[activeMonth];
+                if (!data) return prev;
+                const gs = getGroups(data, section);
+                const grp = gs[groupIdx];
+                if (grp) {
+                  const e = grp.entries.find(en => en.id === tempId);
+                  if (e) e.id = newId;
+                }
+                return { ...prev };
+              });
+            }
+          });
+        }
+      }
     }
   }
 
   function deleteEntry(section: Section, groupIdx: number, entryIdx: number) {
     const groups = getGroups(sheet, section);
-    const g = groups[groupIdx];
-    const entry = g?.entries[entryIdx];
-    if (entry) {
-      pendingDeletionsRef.current.push({ section, categoryId: g.id, id: entry.id, type: "entry" });
+    const entry = groups[groupIdx]?.entries[entryIdx];
+    const catId = groups[groupIdx]?.id || "";
+    if (entry && isLoggedIn() && syncedIdsRef.current.has(entry.id)) {
+      if (section === "income" || section === "expenses") {
+        syncTransactionToAPI(section === "income" ? 1 : 2, catId, entry, "delete");
+      } else {
+        syncEntryToAPI(section, catId, entry, "delete");
+      }
+      syncedIdsRef.current.delete(entry.id);
     }
     applyEdit(section, (groups) => {
       groups[groupIdx].entries.splice(entryIdx, 1);
@@ -645,9 +665,17 @@ export default function BalanceSheetPage() {
   function saveRename() {
     if (renamingGroup && renameValue.trim()) {
       const { section, groupIdx } = renamingGroup;
+      const groups = getGroups(sheet, section);
+      const group = groups[groupIdx];
       applyEdit(section, (groups) => {
         groups[groupIdx].label = renameValue.trim();
       });
+      if (group && isLoggedIn() && syncedIdsRef.current.has(group.id)) {
+        const p = section === "income" || section === "expenses"
+          ? syncTransactionCategoryToAPI(section === "income" ? 1 : 2, { ...group, label: renameValue.trim() }, "update")
+          : syncGroupToAPI(section, { ...group, label: renameValue.trim() }, "update");
+        p.then((newId) => { if (newId) syncedIdsRef.current.add(newId); });
+      }
     }
     setRenamingGroup(null);
   }
@@ -658,11 +686,20 @@ export default function BalanceSheetPage() {
     setConfirmAction({
       msg: `确定删除分组「${label}」？所有条目将被移除。`,
       onConfirm: () => {
-        if (group) {
+        if (group && isLoggedIn() && syncedIdsRef.current.has(group.id)) {
           for (const entry of group.entries) {
-            pendingDeletionsRef.current.push({ section, categoryId: group.id, id: entry.id, type: "entry" });
+            if (!syncedIdsRef.current.has(entry.id)) continue;
+            if (section === "income" || section === "expenses") {
+              syncTransactionToAPI(section === "income" ? 1 : 2, group.id, entry, "delete");
+            } else {
+              syncEntryToAPI(section, group.id, entry, "delete");
+            }
+            syncedIdsRef.current.delete(entry.id);
           }
-          pendingDeletionsRef.current.push({ section, categoryId: "", id: group.id, type: "group" });
+          const p = section === "income" || section === "expenses"
+            ? syncTransactionCategoryToAPI(section === "income" ? 1 : 2, group, "delete")
+            : syncGroupToAPI(section, group, "delete");
+          p.then(() => syncedIdsRef.current.delete(group.id));
         }
         applyEdit(section, (groups) => { groups.splice(groupIdx, 1); });
         setConfirmAction(null);
@@ -678,11 +715,31 @@ export default function BalanceSheetPage() {
       setAlertMsg(`分组「${label}」已存在，请使用其他名称。`);
       return;
     }
-    applyEdit(showAddGroup, (groups) => {
-      groups.unshift({ id: genId(), label, type: addGroupForm.type, entries: [] });
-    });
+    const tempId = genId();
+    const section = showAddGroup;
+    applyEdit(section, (groups) => { groups.unshift({ id: tempId, label, type: addGroupForm.type, entries: [] }); });
     setShowAddGroup(null);
     setAddGroupForm({ label: "", type: "cash" });
+
+    if (isLoggedIn()) {
+      const newGroup: Group = { id: tempId, label, type: addGroupForm.type, entries: [] };
+      const p = section === "income" || section === "expenses"
+        ? syncTransactionCategoryToAPI(section === "income" ? 1 : 2, newGroup, "create")
+        : syncGroupToAPI(section, newGroup, "create");
+      p.then((newId) => {
+        if (newId && newId !== tempId) {
+          syncedIdsRef.current.add(newId);
+          setStore(prev => {
+            const data = prev[activeMonth];
+            if (!data) return prev;
+            const gs = getGroups(data, section);
+            const grp = gs.find(g => g.id === tempId);
+            if (grp) grp.id = newId;
+            return { ...prev };
+          });
+        }
+      });
+    }
   }
 
   function handleDragStart(type: "group" | "entry", section: Section, groupIdx: number, entryIdx?: number) {
@@ -946,17 +1003,55 @@ export default function BalanceSheetPage() {
   function saveFloatEdit() {
     if (!floatEdit) return;
     const { section, groupIdx, entryIdx } = floatEdit;
+    const groups = getGroups(sheet, section);
+    const entry = groups[groupIdx]?.entries[entryIdx];
+    const apiType = section === "income" ? 1 : 2;
     applyEdit(section, (groups) => {
-      const entry = groups[groupIdx]?.entries[entryIdx];
-      if (entry) {
-        entry.name = floatForm.name || entry.name;
-        entry.amount = parseFloat(floatForm.amount) || 0;
+      const e = groups[groupIdx]?.entries[entryIdx];
+      if (e) {
+        e.name = floatForm.name || e.name;
+        e.amount = parseFloat(floatForm.amount) || 0;
       }
     });
     setFloatEdit(null);
+
+    if (entry) {
+      const updated = { ...entry, name: floatForm.name || entry.name, amount: parseFloat(floatForm.amount) || entry.amount };
+      if (entry.transaction_id) {
+        syncTransactionToAPI(apiType, "", updated, "update");
+      } else {
+        const catId = groups[groupIdx]?.id;
+        if (catId && !catId.startsWith("e_")) {
+          syncTransactionToAPI(apiType, catId, updated, "create").then((newId) => {
+            if (newId) {
+              syncedIdsRef.current.add(newId);
+              setStore((prev) => {
+                const data = prev[activeMonth];
+                if (!data) return prev;
+                const items = section === "income" ? data.income : data.expenses;
+                const grp = items[groupIdx];
+                if (grp) {
+                  const e = grp.entries[entryIdx];
+                  if (e) {
+                    e.id = newId;
+                    e.transaction_id = newId;
+                  }
+                }
+                return { ...prev };
+              });
+            }
+          });
+        }
+      }
+    }
   }
 
   function deleteFloatEntry(section: "income" | "expenses", groupIdx: number, entryIdx: number) {
+    const groups = getGroups(sheet, section);
+    const entry = groups[groupIdx]?.entries[entryIdx];
+    if (entry?.transaction_id) {
+      syncTransactionToAPI(section === "income" ? 1 : 2, "", entry, "delete");
+    }
     applyEdit(section, (groups) => {
       groups[groupIdx].entries.splice(entryIdx, 1);
     });
