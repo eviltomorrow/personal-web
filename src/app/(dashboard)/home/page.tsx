@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import Sidebar from "@/components/sidebar";
 import DashboardHeader from "@/components/dashboard-header";
 import { I, navItems } from "@/components/icons";
-import { useUser } from "@/lib/user-context";
 
 function FeatureCard({ icon, label, desc, onClick, gradient, accent }: {
   icon: ReactNode; label: string; desc: string; onClick?: () => void;
@@ -30,7 +29,6 @@ function FeatureCard({ icon, label, desc, onClick, gradient, accent }: {
 
 export default function HomePage() {
   const router = useRouter();
-  const { user } = useUser();
 
   function handleNavChange(key: string) {
     if (key === "assets-and-liabilities") {

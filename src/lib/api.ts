@@ -166,13 +166,6 @@ export interface Transaction {
   updated_at: number;
 }
 
-export interface MonthlySummary {
-  total_income: number;
-  total_expense: number;
-  balance: number;
-  transactions: Transaction[];
-}
-
 // ── Auth API ──
 
 export const authApi = {

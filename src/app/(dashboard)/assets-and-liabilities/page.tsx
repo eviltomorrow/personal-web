@@ -557,8 +557,6 @@ export default function BalanceSheetPage() {
   const netWorth = totalAssets - totalLiabilities;
   const debtRatio = totalAssets > 0 ? (totalLiabilities / totalAssets) * 100 : 0;
 
-  const months = Object.keys(store).sort().reverse();
-
   function openEdit(section: Section, groupIdx: number, entryIdx: number, entry: Entry) {
     setEditEntry({ section, groupIdx, entryIdx });
     setEditForm({
