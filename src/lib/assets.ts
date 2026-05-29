@@ -59,7 +59,7 @@ function convertGroupToApi(g: { id: string; label: string; type: string; entries
 }
 
 export async function fetchSheet(month: string): Promise<ApiSheetData | null> {
-  const res = await apiClient(`/api/v1/balance-sheet?month=${month}`);
+  const res = await apiClient(`/api/v1/assets-and-liabilities?month=${month}`);
   if (res.status === 404) {
     return { month, assets: [], liabilities: [], income: [], expenses: [] };
   }
@@ -88,7 +88,7 @@ export async function saveSheet(
     expenses: (sections.expenses ?? []).map((g, i) => convertGroupToApi(g, i)),
   };
   try {
-    const res = await apiClient("/api/v1/balance-sheet", {
+    const res = await apiClient("/api/v1/assets-and-liabilities", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
