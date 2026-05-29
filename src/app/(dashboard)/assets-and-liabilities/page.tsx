@@ -111,58 +111,7 @@ function loadStore(): SheetStore {
   return {};
 }
 
-function mockSheet(): SheetData {
-  return {
-    assets: [
-      { id: "grp_cash", label: "现金类", type: "cash", sort_order: 0, entries: [
-        { id: "ent_deposit", name: "活期存款", amount: 50000, sort_order: 0 },
-        { id: "ent_fixed", name: "定期存款", amount: 200000, sort_order: 1 },
-        { id: "ent_cash", name: "现金", amount: 5000, sort_order: 2 },
-      ]},
-      { id: "grp_fund", label: "基金", type: "fund", sort_order: 1, entries: [
-        { id: "ent_index", name: "沪深300指数", amount: 150000, sort_order: 0 },
-        { id: "ent_bond", name: "债券基金", amount: 80000, sort_order: 1 },
-      ]},
-      { id: "grp_stock", label: "股票", type: "stock", sort_order: 2, entries: [
-        { id: "ent_tencent", name: "腾讯控股", amount: 50000, quantity: 100, code: "00700", sort_order: 0 },
-        { id: "ent_kweichow", name: "贵州茅台", amount: 30000, quantity: 15, code: "600519", sort_order: 1 },
-      ]},
-      { id: "grp_property", label: "固定资产", type: "property", sort_order: 3, entries: [
-        { id: "ent_house", name: "自住房产", amount: 2000000, sort_order: 0 },
-      ]},
-    ],
-    liabilities: [
-      { id: "grp_loan", label: "贷款", type: "loan", sort_order: 0, entries: [
-        { id: "ent_mortgage", name: "住房贷款", amount: 800000, sort_order: 0 },
-        { id: "ent_car_loan", name: "车贷", amount: 100000, sort_order: 1 },
-      ]},
-      { id: "grp_credit", label: "信用卡", type: "credit", sort_order: 1, entries: [
-        { id: "ent_credit_cmb", name: "招商银行信用卡", amount: 5000, sort_order: 0 },
-        { id: "ent_credit_ccb", name: "建设银行信用卡", amount: 3000, sort_order: 1 },
-      ]},
-    ],
-    income: [
-      { id: "grp_salary", label: "工资收入", type: "income", sort_order: 0, entries: [
-        { id: "ent_salary", name: "月薪", amount: 25000, sort_order: 0 },
-        { id: "ent_bonus", name: "奖金", amount: 5000, sort_order: 1 },
-      ]},
-      { id: "grp_invest", label: "投资收益", type: "income", sort_order: 1, entries: [
-        { id: "ent_fund_div", name: "基金分红", amount: 2000, sort_order: 0 },
-      ]},
-    ],
-    expenses: [
-      { id: "grp_daily", label: "日常开支", type: "expense", sort_order: 0, entries: [
-        { id: "ent_meal", name: "餐饮", amount: 3000, sort_order: 0 },
-        { id: "ent_transport", name: "交通", amount: 500, sort_order: 1 },
-        { id: "ent_shopping", name: "购物", amount: 2000, sort_order: 2 },
-      ]},
-      { id: "grp_entertain", label: "娱乐", type: "expense", sort_order: 1, entries: [
-        { id: "ent_movie", name: "电影", amount: 200, sort_order: 0 },
-        { id: "ent_travel", name: "旅游", amount: 1000, sort_order: 1 },
-      ]},
-    ],
-  };
-}
+
 
 function saveStore(s: SheetStore) {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch { /* ignore */ }
@@ -229,50 +178,64 @@ async function loadFromAPI(): Promise<SheetData | null> {
   }
 }
 
-async function syncGroupToAPI(section: Section, group: Group, _action: "create" | "update" | "delete") {
-  if (!isLoggedIn()) return;
+async function syncGroupToAPI(section: Section, group: Group, _action: "create" | "update" | "delete"): Promise<string | null> {
+  if (!isLoggedIn()) return null;
   try {
     if (section === "assets") {
       if (_action === "create") {
-        await financeApi.createAssetCategory({ name: group.label, sort_order: group.sort_order || 0 });
+        const res = await financeApi.createAssetCategory({ name: group.label, sort_order: group.sort_order || 0 });
+        return res.category_id;
       } else if (_action === "update") {
         await financeApi.updateAssetCategory(group.id, { name: group.label, sort_order: group.sort_order });
+        return group.id;
       } else if (_action === "delete") {
         await financeApi.deleteAssetCategory(group.id);
+        return null;
       }
     } else if (section === "liabilities") {
       if (_action === "create") {
-        await financeApi.createLiabilityCategory({ name: group.label, sort_order: group.sort_order || 0 });
+        const res = await financeApi.createLiabilityCategory({ name: group.label, sort_order: group.sort_order || 0 });
+        return res.category_id;
       } else if (_action === "update") {
         await financeApi.updateLiabilityCategory(group.id, { name: group.label, sort_order: group.sort_order });
+        return group.id;
       } else if (_action === "delete") {
         await financeApi.deleteLiabilityCategory(group.id);
+        return null;
       }
     }
   } catch { /* background sync, ignore */ }
+  return null;
 }
 
-async function syncEntryToAPI(section: Section, categoryId: string, entry: Entry, _action: "create" | "update" | "delete") {
-  if (!isLoggedIn()) return;
+async function syncEntryToAPI(section: Section, categoryId: string, entry: Entry, _action: "create" | "update" | "delete"): Promise<string | null> {
+  if (!isLoggedIn()) return null;
   try {
     if (section === "assets") {
       if (_action === "create") {
-        await financeApi.createAsset({ category_id: categoryId, name: entry.name, amount: entry.amount });
+        const res = await financeApi.createAsset({ category_id: categoryId, name: entry.name, amount: entry.amount });
+        return res.asset_id;
       } else if (_action === "update") {
         await financeApi.updateAsset(entry.id, { name: entry.name, amount: entry.amount });
+        return entry.id;
       } else if (_action === "delete") {
         await financeApi.deleteAsset(entry.id);
+        return null;
       }
     } else if (section === "liabilities") {
       if (_action === "create") {
-        await financeApi.createLiability({ category_id: categoryId, name: entry.name, amount: entry.amount });
+        const res = await financeApi.createLiability({ category_id: categoryId, name: entry.name, amount: entry.amount });
+        return res.liability_id;
       } else if (_action === "update") {
         await financeApi.updateLiability(entry.id, { name: entry.name, amount: entry.amount });
+        return entry.id;
       } else if (_action === "delete") {
         await financeApi.deleteLiability(entry.id);
+        return null;
       }
     }
   } catch { /* background sync, ignore */ }
+  return null;
 }
 
 function fmt(n: number): string {
@@ -435,17 +398,23 @@ export default function BalanceSheetPage() {
   const [showMom, setShowMom] = useState(false);
   const monthPickerRef = useRef<HTMLDivElement>(null);
   const [calendarYear, setCalendarYear] = useState(() => new Date().getFullYear());
+  const syncedIdsRef = useRef<Set<string>>(new Set());
+  const pendingDeletionsRef = useRef<{ section: Section; categoryId: string; id: string; type: "group" | "entry" }[]>([]);
   useEffect(() => {
     const saved = loadStore();
     const month = currentMonth();
     if (!saved[month]) {
-      saved[month] = mockSheet();
+      saved[month] = defaultSheet();
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify(saved)); } catch { /* ignore */ }
     }
     loadFromAPI().then((apiData) => {
       if (apiData) {
         saved[month] = apiData;
         saveStore(saved);
+        const ids = new Set<string>();
+        for (const g of apiData.assets) { ids.add(g.id); for (const e of g.entries) ids.add(e.id); }
+        for (const g of apiData.liabilities) { ids.add(g.id); for (const e of g.entries) ids.add(e.id); }
+        syncedIdsRef.current = ids;
       }
       setStore(saved);
       setReady(true);
@@ -456,20 +425,78 @@ export default function BalanceSheetPage() {
   }, [store]);
 
   const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isSyncingRef = useRef(false);
   useEffect(() => {
     if (!isLoggedIn() || !ready) return;
     if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
-    syncTimerRef.current = setTimeout(() => {
-      const d = store[activeMonth];
-      if (!d) return;
-      for (const section of ["assets", "liabilities"] as Section[]) {
-        const groups = getGroups(d, section);
-        for (const g of groups) {
-          syncGroupToAPI(section, g, "create");
-          for (const e of g.entries) {
-            syncEntryToAPI(section, g.id, e, "create");
+    syncTimerRef.current = setTimeout(async () => {
+      if (isSyncingRef.current) return;
+      isSyncingRef.current = true;
+      try {
+        const d = store[activeMonth];
+        if (!d) return;
+
+        const deletions = pendingDeletionsRef.current.splice(0);
+        for (const del of deletions) {
+          if (syncedIdsRef.current.has(del.id)) {
+            if (del.type === "group") {
+              await syncGroupToAPI(del.section, { id: del.id, label: "", type: "", entries: [], sort_order: 0 }, "delete");
+            } else {
+              await syncEntryToAPI(del.section, del.categoryId, { id: del.id, name: "", amount: 0 }, "delete");
+            }
+            syncedIdsRef.current.delete(del.id);
           }
         }
+
+        for (const section of ["assets", "liabilities"] as Section[]) {
+          const groups = getGroups(d, section);
+          for (const g of groups) {
+            if (!syncedIdsRef.current.has(g.id)) {
+              const newId = await syncGroupToAPI(section, g, "create");
+              if (newId && newId !== g.id) {
+                syncedIdsRef.current.add(newId);
+                setStore(prev => {
+                  const data = prev[activeMonth];
+                  if (!data) return prev;
+                  if (section === "assets") {
+                    const grp = data.assets.find(gr => gr.id === g.id);
+                    if (grp) grp.id = newId;
+                  } else {
+                    const grp = data.liabilities.find(gr => gr.id === g.id);
+                    if (grp) grp.id = newId;
+                  }
+                  return { ...prev };
+                });
+              }
+            } else {
+              await syncGroupToAPI(section, g, "update");
+            }
+
+            for (const e of g.entries) {
+              if (!syncedIdsRef.current.has(e.id)) {
+                const newId = await syncEntryToAPI(section, g.id, e, "create");
+                if (newId && newId !== e.id) {
+                  syncedIdsRef.current.add(newId);
+                  setStore(prev => {
+                    const data = prev[activeMonth];
+                    if (!data) return prev;
+                    const groups = section === "assets" ? data.assets : data.liabilities;
+                    const grp = groups.find(gr => gr.id === g.id);
+                    if (grp) {
+                      const entry = grp.entries.find(en => en.id === e.id);
+                      if (entry) entry.id = newId;
+                    }
+                    return { ...prev };
+                  });
+                }
+              } else {
+                await syncEntryToAPI(section, g.id, e, "update");
+              }
+            }
+          }
+        }
+      } finally {
+        isSyncingRef.current = false;
       }
     }, 5000);
     return () => { if (syncTimerRef.current) clearTimeout(syncTimerRef.current); };
@@ -591,6 +618,12 @@ export default function BalanceSheetPage() {
   }
 
   function deleteEntry(section: Section, groupIdx: number, entryIdx: number) {
+    const groups = getGroups(sheet, section);
+    const g = groups[groupIdx];
+    const entry = g?.entries[entryIdx];
+    if (entry) {
+      pendingDeletionsRef.current.push({ section, categoryId: g.id, id: entry.id, type: "entry" });
+    }
     applyEdit(section, (groups) => {
       groups[groupIdx].entries.splice(entryIdx, 1);
     });
@@ -622,9 +655,17 @@ export default function BalanceSheetPage() {
   }
 
   function confirmDeleteGroup(section: Section, groupIdx: number, label: string) {
+    const groups = getGroups(sheet, section);
+    const group = groups[groupIdx];
     setConfirmAction({
       msg: `确定删除分组「${label}」？所有条目将被移除。`,
       onConfirm: () => {
+        if (group) {
+          for (const entry of group.entries) {
+            pendingDeletionsRef.current.push({ section, categoryId: group.id, id: entry.id, type: "entry" });
+          }
+          pendingDeletionsRef.current.push({ section, categoryId: "", id: group.id, type: "group" });
+        }
         applyEdit(section, (groups) => { groups.splice(groupIdx, 1); });
         setConfirmAction(null);
       },
