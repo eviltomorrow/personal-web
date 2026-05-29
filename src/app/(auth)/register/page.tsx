@@ -2,50 +2,20 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [nickname, setNickname] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError("");
-
-    if (!nickname || !email || !password || !confirmPassword) {
-      setError("请填写所有字段");
-      return;
-    }
-    if (password !== confirmPassword) {
-      setError("两次密码输入不一致");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const res = await fetch("/api/v1/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ auth_type: "email", identifier: email, password, nickname }),
-      });
-
-      const body = await res.json();
-
-      if (body.code !== 0) {
-        setError(body.message || "注册失败");
-        return;
-      }
-
-      setSuccess(true);
-    } catch {
-      setError("网络错误，请稍后重试");
-    } finally {
-      setLoading(false);
-    }
+    if (!nickname || !email || !password || !confirmPassword) return;
+    if (password !== confirmPassword) return;
+    router.push("/");
   }
 
   return (
@@ -113,16 +83,11 @@ export default function RegisterPage() {
               />
             </div>
 
-            {error && (
-              <p className="text-[13px] text-red-500">{error}</p>
-            )}
-
             <button
               type="submit"
-              disabled={loading}
-              className="mt-2 w-full rounded-full bg-[#0071e3] py-[14px] text-[15px] font-medium text-white transition-all duration-200 hover:bg-[#0077ed] active:bg-[#006edb] disabled:opacity-50 shadow-sm cursor-pointer disabled:cursor-not-allowed"
+              className="mt-2 w-full rounded-full bg-[#0071e3] py-[14px] text-[15px] font-medium text-white transition-all duration-200 hover:bg-[#0077ed] active:bg-[#006edb] shadow-sm cursor-pointer"
             >
-              {loading ? "注册中..." : "注册"}
+              注册
             </button>
           </form>
 
@@ -154,26 +119,6 @@ export default function RegisterPage() {
           <a href="#" className="hover:underline cursor-pointer">服务条款</a>
         </div>
       </div>
-
-      {success && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4">
-          <div className="w-full max-w-[360px] rounded-3xl bg-white/95 p-8 text-center shadow-2xl backdrop-blur-xl">
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-sm">
-              <svg className="h-7 w-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <h2 className="text-[20px] font-semibold text-[#1d1d1f]">注册成功</h2>
-            <p className="mt-2 text-[14px] text-[#86868b]">您的账户已创建成功，请前往登录。</p>
-            <Link
-              href="/"
-              className="mt-6 inline-block w-full rounded-full bg-[#0071e3] py-[14px] text-[15px] font-medium text-white transition-all duration-200 hover:bg-[#0077ed] shadow-sm cursor-pointer"
-            >
-              前往登录
-            </Link>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/lib/user-context";
-import { clearTokens, getRefreshToken } from "@/lib/auth";
 import { I, type NavItem } from "./icons";
 
 export default function DashboardHeader({
@@ -36,19 +35,6 @@ export default function DashboardHeader({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  function handleLogout() {
-    const refreshToken = getRefreshToken();
-    if (refreshToken) {
-      const blob = new Blob(
-        [JSON.stringify({ refresh_token: refreshToken })],
-        { type: "application/json" },
-      );
-      navigator.sendBeacon("/api/v1/auth/token/revoke", blob);
-    }
-    clearTokens();
-    router.replace("/");
-  }
 
   return (
     <header className="relative flex h-14 flex-shrink-0 items-center justify-between border-b border-[#e8e8ed]/70 bg-white/80 px-6 backdrop-blur-xl z-20">
@@ -111,16 +97,7 @@ export default function DashboardHeader({
                 {I.User}
                 个人信息
               </button>
-              <div className="border-t border-[#f5f5f7] mt-1 pt-1">
-                <button onClick={handleLogout}
-                  className="flex w-full items-center gap-2 px-4 py-2.5 text-[13px] text-red-500 transition-all duration-200 hover:bg-[#f5f5f7] cursor-pointer"
-                >
-                  <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth="1.5">
-                    <path d="M7 17h8a2 2 0 002-2V5a2 2 0 00-2-2H7M3 10h10m-3-3l3 3-3 3" />
-                  </svg>
-                  退出登录
-                </button>
-              </div>
+
             </div>
           )}
         </div>

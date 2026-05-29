@@ -2,11 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import AuthGuard from "@/components/auth-guard";
 import Sidebar from "@/components/sidebar";
 import DashboardHeader from "@/components/dashboard-header";
 import { I, navItems } from "@/components/icons";
-import { fetchSheet, saveSheet } from "@/lib/assets";
 
 interface Entry {
   id: string;
@@ -110,6 +108,59 @@ function loadStore(): SheetStore {
     if (raw) return JSON.parse(raw) as SheetStore;
   } catch { /* ignore */ }
   return {};
+}
+
+function mockSheet(): SheetData {
+  return {
+    assets: [
+      { id: "grp_cash", label: "现金类", type: "cash", sort_order: 0, entries: [
+        { id: "ent_deposit", name: "活期存款", amount: 50000, sort_order: 0 },
+        { id: "ent_fixed", name: "定期存款", amount: 200000, sort_order: 1 },
+        { id: "ent_cash", name: "现金", amount: 5000, sort_order: 2 },
+      ]},
+      { id: "grp_fund", label: "基金", type: "fund", sort_order: 1, entries: [
+        { id: "ent_index", name: "沪深300指数", amount: 150000, sort_order: 0 },
+        { id: "ent_bond", name: "债券基金", amount: 80000, sort_order: 1 },
+      ]},
+      { id: "grp_stock", label: "股票", type: "stock", sort_order: 2, entries: [
+        { id: "ent_tencent", name: "腾讯控股", amount: 50000, quantity: 100, code: "00700", sort_order: 0 },
+        { id: "ent_kweichow", name: "贵州茅台", amount: 30000, quantity: 15, code: "600519", sort_order: 1 },
+      ]},
+      { id: "grp_property", label: "固定资产", type: "property", sort_order: 3, entries: [
+        { id: "ent_house", name: "自住房产", amount: 2000000, sort_order: 0 },
+      ]},
+    ],
+    liabilities: [
+      { id: "grp_loan", label: "贷款", type: "loan", sort_order: 0, entries: [
+        { id: "ent_mortgage", name: "住房贷款", amount: 800000, sort_order: 0 },
+        { id: "ent_car_loan", name: "车贷", amount: 100000, sort_order: 1 },
+      ]},
+      { id: "grp_credit", label: "信用卡", type: "credit", sort_order: 1, entries: [
+        { id: "ent_credit_cmb", name: "招商银行信用卡", amount: 5000, sort_order: 0 },
+        { id: "ent_credit_ccb", name: "建设银行信用卡", amount: 3000, sort_order: 1 },
+      ]},
+    ],
+    income: [
+      { id: "grp_salary", label: "工资收入", type: "income", sort_order: 0, entries: [
+        { id: "ent_salary", name: "月薪", amount: 25000, sort_order: 0 },
+        { id: "ent_bonus", name: "奖金", amount: 5000, sort_order: 1 },
+      ]},
+      { id: "grp_invest", label: "投资收益", type: "income", sort_order: 1, entries: [
+        { id: "ent_fund_div", name: "基金分红", amount: 2000, sort_order: 0 },
+      ]},
+    ],
+    expenses: [
+      { id: "grp_daily", label: "日常开支", type: "expense", sort_order: 0, entries: [
+        { id: "ent_meal", name: "餐饮", amount: 3000, sort_order: 0 },
+        { id: "ent_transport", name: "交通", amount: 500, sort_order: 1 },
+        { id: "ent_shopping", name: "购物", amount: 2000, sort_order: 2 },
+      ]},
+      { id: "grp_entertain", label: "娱乐", type: "expense", sort_order: 1, entries: [
+        { id: "ent_movie", name: "电影", amount: 200, sort_order: 0 },
+        { id: "ent_travel", name: "旅游", amount: 1000, sort_order: 1 },
+      ]},
+    ],
+  };
 }
 
 function saveStore(s: SheetStore) {
@@ -250,7 +301,8 @@ function renderPreviewTable(
 
 export default function BalanceSheetPage() {
   const router = useRouter();
-  const [store, setStore] = useState<SheetStore>(() => loadStore());
+  const [store, setStore] = useState<SheetStore>({});
+  const [ready, setReady] = useState(false);
   const [activeMonth, setActiveMonth] = useState(currentMonth());
   const [editing, setEditing] = useState(false);
   const [editEntry, setEditEntry] = useState<{ section: Section; groupIdx: number; entryIdx: number } | null>(null);
@@ -275,40 +327,19 @@ export default function BalanceSheetPage() {
   const [showMom, setShowMom] = useState(false);
   const monthPickerRef = useRef<HTMLDivElement>(null);
   const [calendarYear, setCalendarYear] = useState(() => new Date().getFullYear());
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
+  useEffect(() => {
+    const saved = loadStore();
+    const month = currentMonth();
+    if (!saved[month]) {
+      saved[month] = mockSheet();
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(saved)); } catch { /* ignore */ }
+    }
+    setStore(saved);
+    setReady(true);
+  }, []);
   useEffect(() => { saveStore(store); }, [store]);
 
-  useEffect(() => {
-    fetchSheet(activeMonth).then((apiData) => {
-      if (!apiData) return;
-      setStore((prev) => ({
-        ...prev,
-        [activeMonth]: {
-          assets: apiData.assets as Group[],
-          liabilities: apiData.liabilities as Group[],
-          income: apiData.income as Group[],
-          expenses: apiData.expenses as Group[],
-        },
-      }));
-    });
-  }, [activeMonth]);
 
-  useEffect(() => {
-    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = setTimeout(() => {
-      const m = activeMonth;
-      const data = store[m];
-      if (!data) return;
-      saveSheet(m, {
-        assets: data.assets,
-        liabilities: data.liabilities,
-        income: data.income,
-        expenses: data.expenses,
-      });
-    }, 2000);
-    return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
-  }, [store, activeMonth]);
   useEffect(() => {
     if (showMonthPicker) {
       setCalendarYear(parseInt(activeMonth.slice(0, 4)));
@@ -849,7 +880,6 @@ export default function BalanceSheetPage() {
   }
 
   return (
-    <AuthGuard>
     <div className="flex min-h-screen bg-[#f5f5f7] overflow-hidden">
 
       <Sidebar items={navItems} activeNav="balance-sheet" onNavChange={handleNavChange} />
@@ -858,6 +888,12 @@ export default function BalanceSheetPage() {
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#0071e3]/[0.02] to-[#0071e3]/[0.04] pointer-events-none" />
 
         <DashboardHeader activeNav="balance-sheet" navItems={navItems} />
+
+        {!ready ? (
+          <main className="relative flex-1 overflow-y-auto z-10 mx-auto w-full max-w-[960px] px-6 pt-6 pb-20">
+            <div className="flex items-center justify-center h-64 text-[14px] text-[#86868b]">加载中...</div>
+          </main>
+        ) : (
 
         <main className="relative flex-1 overflow-y-auto z-10 mx-auto w-full max-w-[960px] px-6 pt-6 pb-20">
 
@@ -973,6 +1009,7 @@ export default function BalanceSheetPage() {
           </div>
 
         </main>
+        )}
       </div>
 
       {/* ── Floating Toolbar ── */}
@@ -1239,6 +1276,5 @@ export default function BalanceSheetPage() {
         </div>
       )}
     </div>
-    </AuthGuard>
   );
 }
