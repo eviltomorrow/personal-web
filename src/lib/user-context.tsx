@@ -1,15 +1,11 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import { authApi, userApi, setTokens, clearTokens, isLoggedIn, type UserProfile } from "@/lib/api";
-
-export type { UserProfile } from "@/lib/api";
+import { authApi, setTokens, clearTokens } from "@/lib/api";
 
 interface UserContextType {
-  user: UserProfile | null;
+  user: null;
   loading: boolean;
-  refreshUser: () => void;
   login: (identifier: string, password: string) => Promise<void>;
   register: (authType: "email" | "phone" | "username", identifier: string, password: string) => Promise<void>;
   logout: () => void;
@@ -18,65 +14,34 @@ interface UserContextType {
 const UserContext = createContext<UserContextType>({
   user: null,
   loading: true,
-  refreshUser: () => {},
   login: async () => {},
   register: async () => {},
   logout: () => {},
 });
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchUser = useCallback(async () => {
-    if (!isLoggedIn()) {
-      setUser(null);
-      setLoading(false);
-      return;
-    }
-    try {
-      const profile = await userApi.getProfile();
-      setUser(profile);
-    } catch {
-      setUser(null);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
-    fetchUser();
-  }, [fetchUser]);
+    setLoading(false);
+  }, []);
 
   const login = useCallback(async (identifier: string, password: string) => {
     const result = await authApi.login(identifier, password);
     setTokens(result.access_token, result.refresh_token);
-    try {
-      const profile = await userApi.getProfile();
-      setUser(profile);
-    } catch {
-      setUser(null);
-    }
   }, []);
 
   const register = useCallback(async (authType: "email" | "phone" | "username", identifier: string, password: string) => {
     const result = await authApi.register(authType, identifier, password);
     setTokens(result.access_token, result.refresh_token);
-    try {
-      const profile = await userApi.getProfile();
-      setUser(profile);
-    } catch {
-      setUser(null);
-    }
   }, []);
 
   const logout = useCallback(() => {
     clearTokens();
-    setUser(null);
   }, []);
 
   return (
-    <UserContext.Provider value={{ user, loading, refreshUser: fetchUser, login, register, logout }}>
+    <UserContext.Provider value={{ user: null, loading, login, register, logout }}>
       {children}
     </UserContext.Provider>
   );

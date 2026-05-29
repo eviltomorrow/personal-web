@@ -93,19 +93,6 @@ export interface LoginResult {
   expires_in: number;
 }
 
-export interface UserProfile {
-  user_id: string;
-  nickname: string;
-  avatar_url: string;
-  gender: number;
-  birthday: number;
-  bio: string;
-  phone: string;
-  email: string;
-  created_at: number;
-  updated_at: number;
-}
-
 export interface AssetCategory {
   category_id: string;
   user_id: string;
@@ -196,25 +183,6 @@ export const authApi = {
 
   register(authType: "email" | "phone" | "username", identifier: string, password: string): Promise<LoginResult> {
     return request<LoginResult>("POST", "/auth/register", { auth_type: authType, identifier, password });
-  },
-};
-
-// ── User API ──
-
-export const userApi = {
-  getProfile(): Promise<UserProfile> {
-    return request<UserProfile>("GET", "/user/profile");
-  },
-
-  updateProfile(data: {
-    nickname?: string;
-    gender?: number;
-    birthday?: number;
-    bio?: string;
-    phone?: string;
-    email?: string;
-  }): Promise<UserProfile> {
-    return request<UserProfile>("PUT", "/user/profile", data);
   },
 };
 

@@ -38,17 +38,9 @@ export default function HomePage() {
     }
   }
 
-  const nickname = user?.nickname || "";
-  const avatarUrl = user?.avatar_url;
-  const initial = nickname ? nickname.charAt(0).toUpperCase() : "U";
-
   const now = new Date();
   const h = now.getHours();
   const greeting = h < 6 ? "夜深了" : h < 9 ? "早上好" : h < 12 ? "上午好" : h < 14 ? "中午好" : h < 18 ? "下午好" : "晚上好";
-
-  const createdDate = user?.created_at
-    ? new Date(user.created_at * 1000).toLocaleDateString("zh-CN", { year: "numeric", month: "long", day: "numeric" })
-    : "—";
 
   return (
     <div className="flex min-h-screen bg-[#f5f5f7] selection:bg-[#0071e3]/20">
@@ -64,7 +56,7 @@ export default function HomePage() {
           <div className="mx-auto w-full max-w-[800px] px-6 pt-12 pb-20">
 
             <div className="mb-10">
-              <h1 className="text-[32px] font-semibold tracking-[-0.03em] text-[#1d1d1f]">{greeting}，{nickname}</h1>
+              <h1 className="text-[32px] font-semibold tracking-[-0.03em] text-[#1d1d1f]">{greeting}</h1>
               <p className="mt-1.5 text-[15px] text-[#6e6e73]">欢迎回来，今天是 {now.toLocaleDateString("zh-CN", { year: "numeric", month: "long", day: "numeric", weekday: "long" })}</p>
             </div>
 
