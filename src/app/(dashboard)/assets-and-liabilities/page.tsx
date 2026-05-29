@@ -870,9 +870,18 @@ export default function BalanceSheetPage() {
 
   function initDragPanel(e: React.MouseEvent) {
     dragRef.current = { startX: e.clientX, startY: e.clientY, origX: panelPos.x, origY: panelPos.y };
+    const el = panelRef.current;
+    if (!el) return;
+    const pw = el.offsetWidth, ph = el.offsetHeight;
     const onMove = (ev: MouseEvent) => {
       if (!dragRef.current) return;
-      setPanelPos({ x: dragRef.current.origX + (ev.clientX - dragRef.current.startX), y: dragRef.current.origY + (ev.clientY - dragRef.current.startY) });
+      const x = dragRef.current.origX + (ev.clientX - dragRef.current.startX);
+      const y = dragRef.current.origY + (ev.clientY - dragRef.current.startY);
+      const minX = pw + 16 - window.innerWidth;
+      const maxX = 16;
+      const minY = ph + 24 - window.innerHeight;
+      const maxY = 24;
+      setPanelPos({ x: Math.max(minX, Math.min(maxX, x)), y: Math.max(minY, Math.min(maxY, y)) });
     };
     const onUp = () => { dragRef.current = null; window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
     window.addEventListener("mousemove", onMove);
@@ -882,20 +891,20 @@ export default function BalanceSheetPage() {
   return (
     <div className="flex min-h-screen bg-[#f5f5f7] overflow-hidden">
 
-      <Sidebar items={navItems} activeNav="balance-sheet" onNavChange={handleNavChange} />
+      <Sidebar items={navItems} activeNav="assets-and-liabilities" onNavChange={handleNavChange} />
 
       <div className="flex flex-1 flex-col overflow-hidden relative">
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#0071e3]/[0.02] to-[#0071e3]/[0.04] pointer-events-none" />
 
-        <DashboardHeader activeNav="balance-sheet" navItems={navItems} />
+        <DashboardHeader activeNav="assets-and-liabilities" navItems={navItems} />
 
         {!ready ? (
-          <main className="relative flex-1 overflow-y-auto z-10 mx-auto w-full max-w-[960px] px-6 pt-6 pb-20">
+          <main className="relative flex-1 overflow-y-auto z-10 mx-auto w-full max-w-[1080px] px-6 pt-6 pb-20">
             <div className="flex items-center justify-center h-64 text-[14px] text-[#86868b]">加载中...</div>
           </main>
         ) : (
 
-        <main className="relative flex-1 overflow-y-auto z-10 mx-auto w-full max-w-[960px] px-6 pt-6 pb-20">
+        <main className="relative flex-1 overflow-y-auto z-10 mx-auto w-full max-w-[1080px] px-6 pt-6 pb-20">
 
           {/* ── Header ── */}
           <div className="mb-6 flex items-start justify-between">

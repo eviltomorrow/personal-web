@@ -28,5 +28,5 @@ export interface NavItem {
 
 export const navItems: NavItem[] = [
   { key: "home",          icon: I.Home,  label: "首页" },
-  { key: "balance-sheet", icon: I.Chart, label: "资产与负债" },
+  { key: "assets-and-liabilities", icon: I.Chart, label: "资产与负债" },
 ];

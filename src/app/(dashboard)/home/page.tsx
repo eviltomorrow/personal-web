@@ -41,7 +41,7 @@ export default function HomePage() {
   const { user } = useUser();
 
   function handleNavChange(key: string) {
-    if (key === "balance-sheet") {
+    if (key === "assets-and-liabilities") {
       router.push("/assets-and-liabilities");
     }
   }
