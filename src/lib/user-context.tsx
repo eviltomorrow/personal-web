@@ -1,46 +1,74 @@
 "use client";
 
-import { createContext, useContext } from "react";
+import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { authApi, userApi, setTokens, clearTokens, isLoggedIn, type UserProfile } from "@/lib/api";
 
-export interface UserInfo {
-  user_id?: string;
-  nickname: string;
-  email?: string;
-  phone?: string;
-  avatar_url?: string;
-  gender?: number;
-  birthday?: number;
-  bio?: string;
-  created_at?: number;
-  updated_at?: number;
-}
-
-const MOCK_USER: UserInfo = {
-  user_id: "demo_user_001",
-  nickname: "Demo用户",
-  email: "demo@example.com",
-  phone: "13800138000",
-  avatar_url: "",
-  gender: 0,
-  birthday: Math.floor(Date.now() / 1000) - 86400 * 365 * 20,
-  bio: "这是一个演示账户，所有数据均为本地模拟。",
-  created_at: Math.floor(Date.now() / 1000) - 86400 * 30,
-  updated_at: Math.floor(Date.now() / 1000),
-};
+export type { UserProfile } from "@/lib/api";
 
 interface UserContextType {
-  user: UserInfo | null;
+  user: UserProfile | null;
+  loading: boolean;
   refreshUser: () => void;
+  login: (identifier: string, password: string) => Promise<void>;
+  register: (authType: "email" | "phone" | "username", identifier: string, password: string) => Promise<void>;
+  logout: () => void;
 }
 
 const UserContext = createContext<UserContextType>({
-  user: MOCK_USER,
+  user: null,
+  loading: true,
   refreshUser: () => {},
+  login: async () => {},
+  register: async () => {},
+  logout: () => {},
 });
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const fetchUser = useCallback(async () => {
+    if (!isLoggedIn()) {
+      setUser(null);
+      setLoading(false);
+      return;
+    }
+    try {
+      const profile = await userApi.getProfile();
+      setUser(profile);
+    } catch {
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchUser();
+  }, [fetchUser]);
+
+  const login = useCallback(async (identifier: string, password: string) => {
+    const result = await authApi.login(identifier, password);
+    setTokens(result.access_token, result.refresh_token);
+    const profile = await userApi.getProfile();
+    setUser(profile);
+  }, []);
+
+  const register = useCallback(async (authType: "email" | "phone" | "username", identifier: string, password: string) => {
+    const result = await authApi.register(authType, identifier, password);
+    setTokens(result.access_token, result.refresh_token);
+    const profile = await userApi.getProfile();
+    setUser(profile);
+  }, []);
+
+  const logout = useCallback(() => {
+    clearTokens();
+    setUser(null);
+  }, []);
+
   return (
-    <UserContext.Provider value={{ user: MOCK_USER, refreshUser: () => {} }}>
+    <UserContext.Provider value={{ user, loading, refreshUser: fetchUser, login, register, logout }}>
       {children}
     </UserContext.Provider>
   );

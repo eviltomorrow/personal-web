@@ -3,19 +3,42 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useUser } from "@/lib/user-context";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { register } = useUser();
   const [nickname, setNickname] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!nickname || !email || !password || !confirmPassword) return;
-    if (password !== confirmPassword) return;
-    router.push("/");
+    if (!nickname || !email || !password || !confirmPassword) {
+      setError("请填写所有字段");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError("两次输入的密码不一致");
+      return;
+    }
+    if (password.length < 8) {
+      setError("密码至少需要 8 位字符");
+      return;
+    }
+    setError("");
+    setSubmitting(true);
+    try {
+      await register("email", email, password);
+      router.push("/home");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "注册失败");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -83,11 +106,16 @@ export default function RegisterPage() {
               />
             </div>
 
+            {error && (
+              <p className="text-[13px] text-red-500 text-center">{error}</p>
+            )}
+
             <button
               type="submit"
-              className="mt-2 w-full rounded-full bg-[#0071e3] py-[14px] text-[15px] font-medium text-white transition-all duration-200 hover:bg-[#0077ed] active:bg-[#006edb] shadow-sm cursor-pointer"
+              disabled={submitting}
+              className="mt-2 w-full rounded-full bg-[#0071e3] py-[14px] text-[15px] font-medium text-white transition-all duration-200 hover:bg-[#0077ed] active:bg-[#006edb] shadow-sm cursor-pointer disabled:opacity-50"
             >
-              注册
+              {submitting ? "注册中..." : "注册"}
             </button>
           </form>
 

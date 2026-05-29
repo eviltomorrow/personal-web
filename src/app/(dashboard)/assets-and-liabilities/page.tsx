@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Sidebar from "@/components/sidebar";
 import DashboardHeader from "@/components/dashboard-header";
 import { I, navItems } from "@/components/icons";
+import { financeApi, isLoggedIn } from "@/lib/api";
 
 interface Entry {
   id: string;
@@ -165,6 +166,113 @@ function mockSheet(): SheetData {
 
 function saveStore(s: SheetStore) {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch { /* ignore */ }
+}
+
+async function loadFromAPI(): Promise<SheetData | null> {
+  if (!isLoggedIn()) return null;
+  try {
+    const [assetCats, liabilityCats, incomeCats, expenseCats] = await Promise.all([
+      financeApi.listAssetCategories(),
+      financeApi.listLiabilityCategories(),
+      financeApi.listTransactionCategories(1),
+      financeApi.listTransactionCategories(2),
+    ]);
+
+    const assetIds = assetCats.categories.map((c) => c.category_id);
+    const liabilityIds = liabilityCats.categories.map((c) => c.category_id);
+    const incomeIds = incomeCats.categories.map((c) => c.category_id);
+    const expenseIds = expenseCats.categories.map((c) => c.category_id);
+
+    const [assetsRes, liabilitiesRes] = await Promise.all([
+      financeApi.listAssets(),
+      financeApi.listLiabilities(),
+    ]);
+
+    const now = new Date();
+    const startDate = Math.floor(new Date(now.getFullYear(), now.getMonth(), 1).getTime() / 1000);
+    const endDate = Math.floor(new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).getTime() / 1000);
+
+    const [incomeTxRes, expenseTxRes] = await Promise.all([
+      financeApi.listTransactions({ type: 1, start_date: startDate, end_date: endDate, page_size: 1000 }),
+      financeApi.listTransactions({ type: 2, start_date: startDate, end_date: endDate, page_size: 1000 }),
+    ]);
+
+    function buildGroups(
+      cats: { category_id: string; name: string; sort_order: number }[],
+      items: { category_id: string; name: string; amount: number }[],
+      typeVal: string,
+    ): Group[] {
+      return cats.map((cat, i) => ({
+        id: cat.category_id,
+        label: cat.name,
+        type: typeVal,
+        sort_order: cat.sort_order,
+        entries: items
+          .filter((it) => it.category_id === cat.category_id)
+          .map((it, ei) => ({
+            id: `${cat.category_id}_${ei}`,
+            name: it.name,
+            amount: it.amount,
+            sort_order: ei,
+          })),
+      }));
+    }
+
+    return {
+      assets: buildGroups(assetCats.categories, assetsRes.assets, "cash"),
+      liabilities: buildGroups(liabilityCats.categories, liabilitiesRes.liabilities, "loan"),
+      income: buildGroups(incomeCats.categories, incomeTxRes.transactions.map((t) => ({ ...t, name: t.description })), "income"),
+      expenses: buildGroups(expenseCats.categories, expenseTxRes.transactions.map((t) => ({ ...t, name: t.description })), "expense"),
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function syncGroupToAPI(section: Section, group: Group, _action: "create" | "update" | "delete") {
+  if (!isLoggedIn()) return;
+  try {
+    if (section === "assets") {
+      if (_action === "create") {
+        await financeApi.createAssetCategory({ name: group.label, sort_order: group.sort_order || 0 });
+      } else if (_action === "update") {
+        await financeApi.updateAssetCategory(group.id, { name: group.label, sort_order: group.sort_order });
+      } else if (_action === "delete") {
+        await financeApi.deleteAssetCategory(group.id);
+      }
+    } else if (section === "liabilities") {
+      if (_action === "create") {
+        await financeApi.createLiabilityCategory({ name: group.label, sort_order: group.sort_order || 0 });
+      } else if (_action === "update") {
+        await financeApi.updateLiabilityCategory(group.id, { name: group.label, sort_order: group.sort_order });
+      } else if (_action === "delete") {
+        await financeApi.deleteLiabilityCategory(group.id);
+      }
+    }
+  } catch { /* background sync, ignore */ }
+}
+
+async function syncEntryToAPI(section: Section, categoryId: string, entry: Entry, _action: "create" | "update" | "delete") {
+  if (!isLoggedIn()) return;
+  try {
+    if (section === "assets") {
+      if (_action === "create") {
+        await financeApi.createAsset({ category_id: categoryId, name: entry.name, amount: entry.amount });
+      } else if (_action === "update") {
+        await financeApi.updateAsset(entry.id, { name: entry.name, amount: entry.amount });
+      } else if (_action === "delete") {
+        await financeApi.deleteAsset(entry.id);
+      }
+    } else if (section === "liabilities") {
+      if (_action === "create") {
+        await financeApi.createLiability({ category_id: categoryId, name: entry.name, amount: entry.amount });
+      } else if (_action === "update") {
+        await financeApi.updateLiability(entry.id, { name: entry.name, amount: entry.amount });
+      } else if (_action === "delete") {
+        await financeApi.deleteLiability(entry.id);
+      }
+    }
+  } catch { /* background sync, ignore */ }
 }
 
 function fmt(n: number): string {
@@ -334,10 +442,38 @@ export default function BalanceSheetPage() {
       saved[month] = mockSheet();
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify(saved)); } catch { /* ignore */ }
     }
-    setStore(saved);
-    setReady(true);
+    loadFromAPI().then((apiData) => {
+      if (apiData) {
+        saved[month] = apiData;
+        saveStore(saved);
+      }
+      setStore(saved);
+      setReady(true);
+    });
   }, []);
-  useEffect(() => { saveStore(store); }, [store]);
+  useEffect(() => {
+    saveStore(store);
+  }, [store]);
+
+  const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!isLoggedIn() || !ready) return;
+    if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+    syncTimerRef.current = setTimeout(() => {
+      const d = store[activeMonth];
+      if (!d) return;
+      for (const section of ["assets", "liabilities"] as Section[]) {
+        const groups = getGroups(d, section);
+        for (const g of groups) {
+          syncGroupToAPI(section, g, "create");
+          for (const e of g.entries) {
+            syncEntryToAPI(section, g.id, e, "create");
+          }
+        }
+      }
+    }, 5000);
+    return () => { if (syncTimerRef.current) clearTimeout(syncTimerRef.current); };
+  }, [store, activeMonth, ready]);
 
 
   useEffect(() => {

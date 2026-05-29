@@ -1,9 +1,31 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useUser } from "@/lib/user-context";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { login } = useUser();
+  const [identifier, setIdentifier] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!identifier || !password) return;
+    setError("");
+    setSubmitting(true);
+    try {
+      await login(identifier, password);
+      router.push("/home");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "登录失败");
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-4">
@@ -24,15 +46,17 @@ export default function LoginPage() {
             <p className="mt-1 text-[14px] text-[#86868b]">欢迎回到 liarsa</p>
           </div>
 
-          <form className="mt-8 flex flex-col gap-4" onSubmit={(e) => { e.preventDefault(); router.push("/home"); }}>
+          <form className="mt-8 flex flex-col gap-4" onSubmit={handleSubmit}>
             <div>
-              <label htmlFor="email" className="text-[12px] font-medium text-[#6e6e73]">
+              <label htmlFor="identifier" className="text-[12px] font-medium text-[#6e6e73]">
                 邮箱或手机号码
               </label>
               <input
-                id="email"
-                type="email"
+                id="identifier"
+                type="text"
                 placeholder="you@example.com"
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
                 className="mt-1.5 w-full rounded-xl border border-[#d2d2d7] bg-white px-[18px] py-[14px] text-[15px] text-[#1d1d1f] outline-none placeholder:text-[#86868b] focus:border-[#0071e3] focus:ring-[3px] focus:ring-[#0071e3]/20 transition-all duration-200"
               />
             </div>
@@ -49,15 +73,22 @@ export default function LoginPage() {
                 id="password"
                 type="password"
                 placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 className="mt-1.5 w-full rounded-xl border border-[#d2d2d7] bg-white px-[18px] py-[14px] text-[15px] text-[#1d1d1f] outline-none placeholder:text-[#86868b] focus:border-[#0071e3] focus:ring-[3px] focus:ring-[#0071e3]/20 transition-all duration-200"
               />
             </div>
 
+            {error && (
+              <p className="text-[13px] text-red-500 text-center">{error}</p>
+            )}
+
             <button
               type="submit"
-              className="mt-2 w-full rounded-full bg-[#0071e3] py-[14px] text-[15px] font-medium text-white transition-all duration-200 hover:bg-[#0077ed] active:bg-[#006edb] shadow-sm cursor-pointer"
+              disabled={submitting}
+              className="mt-2 w-full rounded-full bg-[#0071e3] py-[14px] text-[15px] font-medium text-white transition-all duration-200 hover:bg-[#0077ed] active:bg-[#006edb] shadow-sm cursor-pointer disabled:opacity-50"
             >
-              登录
+              {submitting ? "登录中..." : "登录"}
             </button>
           </form>
 
