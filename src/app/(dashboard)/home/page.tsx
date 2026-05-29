@@ -27,14 +27,6 @@ function FeatureCard({ icon, label, desc, onClick, gradient, accent }: {
   );
 }
 
-function InfoRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between py-2">
-      <span className="text-[13px] text-[#86868b]">{label}</span>
-      <span className="text-[13px] font-medium text-[#1d1d1f]">{value}</span>
-    </div>
-  );
-}
 
 export default function HomePage() {
   const router = useRouter();
@@ -85,28 +77,8 @@ export default function HomePage() {
                 accent="bg-emerald-50 text-emerald-600"
                 onClick={() => router.push("/assets-and-liabilities")}
               />
-              <FeatureCard
-                icon={I.User}
-                label="个人信息"
-                desc="查看和编辑您的个人资料"
-                gradient="from-blue-500/10 to-blue-500/5"
-                accent="bg-blue-50 text-blue-600"
-                onClick={() => router.push("/profile")}
-              />
             </div>
 
-            <div className="rounded-3xl border border-[#d2d2d7]/80 bg-white/90 px-8 py-8 shadow-sm backdrop-blur-xl">
-              <h2 className="text-[18px] font-semibold tracking-[-0.02em] text-[#1d1d1f] mb-6">账户概览</h2>
-              <div className="space-y-1">
-                <InfoRow label="昵称" value={nickname || "—"} />
-                <InfoRow label="邮箱" value={user?.email || "—"} />
-                <InfoRow label="手机" value={user?.phone || "—"} />
-                <InfoRow label="性别" value={user?.gender !== undefined ? ["保密", "男", "女"][user.gender] : "—"} />
-                <InfoRow label="生日" value={user?.birthday ? new Date(user.birthday * 1000).toLocaleDateString("zh-CN") : "—"} />
-                <InfoRow label="注册时间" value={createdDate} />
-                <InfoRow label="简介" value={user?.bio || "—"} />
-              </div>
-            </div>
           </div>
         </main>
       </div>

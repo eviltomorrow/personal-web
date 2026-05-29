@@ -8,7 +8,6 @@ import { useUser } from "@/lib/user-context";
 export default function RegisterPage() {
   const router = useRouter();
   const { register } = useUser();
-  const [nickname, setNickname] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -17,7 +16,7 @@ export default function RegisterPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!nickname || !email || !password || !confirmPassword) {
+    if (!email || !password || !confirmPassword) {
       setError("请填写所有字段");
       return;
     }
@@ -61,17 +60,6 @@ export default function RegisterPage() {
           </div>
 
           <form className="mt-8 flex flex-col gap-4" onSubmit={handleSubmit}>
-            <div>
-              <label htmlFor="nickname" className="text-[12px] font-medium text-[#6e6e73]">昵称</label>
-              <input
-                id="nickname"
-                type="text"
-                placeholder="您的昵称"
-                value={nickname}
-                onChange={(e) => setNickname(e.target.value)}
-                className="mt-1.5 w-full rounded-xl border border-[#d2d2d7] bg-white px-[18px] py-[14px] text-[15px] text-[#1d1d1f] outline-none placeholder:text-[#86868b] focus:border-[#0071e3] focus:ring-[3px] focus:ring-[#0071e3]/20 transition-all duration-200"
-              />
-            </div>
             <div>
               <label htmlFor="email" className="text-[12px] font-medium text-[#6e6e73]">邮箱</label>
               <input

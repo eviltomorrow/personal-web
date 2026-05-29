@@ -51,15 +51,23 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const login = useCallback(async (identifier: string, password: string) => {
     const result = await authApi.login(identifier, password);
     setTokens(result.access_token, result.refresh_token);
-    const profile = await userApi.getProfile();
-    setUser(profile);
+    try {
+      const profile = await userApi.getProfile();
+      setUser(profile);
+    } catch {
+      setUser(null);
+    }
   }, []);
 
   const register = useCallback(async (authType: "email" | "phone" | "username", identifier: string, password: string) => {
     const result = await authApi.register(authType, identifier, password);
     setTokens(result.access_token, result.refresh_token);
-    const profile = await userApi.getProfile();
-    setUser(profile);
+    try {
+      const profile = await userApi.getProfile();
+      setUser(profile);
+    } catch {
+      setUser(null);
+    }
   }, []);
 
   const logout = useCallback(() => {

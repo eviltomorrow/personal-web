@@ -1,9 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
-import { useRouter } from "next/navigation";
-import { useUser } from "@/lib/user-context";
 import { I, type NavItem } from "./icons";
 
 export default function DashboardHeader({
@@ -14,20 +11,10 @@ export default function DashboardHeader({
   navItems: NavItem[];
 }) {
   const [bellOpen, setBellOpen] = useState(false);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const router = useRouter();
-  const { user } = useUser();
-  const menuRef = useRef<HTMLDivElement>(null);
   const bellRef = useRef<HTMLDivElement>(null);
-  const nickname = user?.nickname || "";
-  const avatarUrl = user?.avatar_url;
-  const initial = nickname ? nickname.charAt(0).toUpperCase() : "U";
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setDropdownOpen(false);
-      }
       if (bellRef.current && !bellRef.current.contains(e.target as Node)) {
         setBellOpen(false);
       }
@@ -74,33 +61,6 @@ export default function DashboardHeader({
           )}
         </div>
 
-        <div className="relative ml-2" ref={menuRef}>
-          <button onClick={() => setDropdownOpen(!dropdownOpen)}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-[#0071e3] text-[15px] font-bold text-white shadow-sm ring-2 ring-white transition-all duration-200 hover:bg-[#0077ed] active:bg-[#006edb] overflow-hidden cursor-pointer"
-          >
-            {avatarUrl ? (
-              <Image src={avatarUrl} alt="" width={36} height={36} className="h-full w-full object-cover" />
-            ) : (
-              initial
-            )}
-          </button>
-
-          {dropdownOpen && (
-            <div className="absolute right-0 top-10 w-44 rounded-2xl border border-[#d2d2d7]/80 bg-white/95 py-2 shadow-lg backdrop-blur-xl z-50">
-              <div className="border-b border-[#f5f5f7] px-4 py-2.5">
-                <p className="text-[13px] font-medium text-[#1d1d1f]">{nickname}</p>
-                <p className="text-[11px] text-[#86868b]">{user?.email}</p>
-              </div>
-              <button onClick={() => { setDropdownOpen(false); router.push("/profile"); }}
-                className="flex w-full items-center gap-2 px-4 py-2.5 text-[13px] text-[#1d1d1f] transition-all duration-200 hover:bg-[#f5f5f7] cursor-pointer"
-              >
-                {I.User}
-                个人信息
-              </button>
-
-            </div>
-          )}
-        </div>
       </div>
     </header>
   );
