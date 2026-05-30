@@ -24,10 +24,6 @@ export default function RegisterPage() {
       setError("两次输入的密码不一致");
       return;
     }
-    if (password.length < 8) {
-      setError("密码至少需要 8 位字符");
-      return;
-    }
     setError("");
     setSubmitting(true);
     try {
@@ -76,7 +72,7 @@ export default function RegisterPage() {
               <input
                 id="password"
                 type="password"
-                placeholder="至少 8 位字符"
+                placeholder="输入密码"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="mt-1.5 w-full rounded-xl border border-[#d2d2d7] bg-white px-[18px] py-[14px] text-[15px] text-[#1d1d1f] outline-none placeholder:text-[#86868b] focus:border-[#0071e3] focus:ring-[3px] focus:ring-[#0071e3]/20 transition-all duration-200"

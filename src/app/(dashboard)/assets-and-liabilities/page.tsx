@@ -1114,6 +1114,7 @@ export default function BalanceSheetPage() {
     const label = isIncome ? "收入" : "开支";
     const total = isIncome ? totalIncome : totalExpenses;
     const items = isIncome ? sheet.income : sheet.expenses;
+    const hasEntries = items.some((g) => g.entries.length > 0);
 
     return (
       <div className={`px-3 ${isIncome ? "pt-3 pb-1.5" : "pt-1.5 pb-3"}`}>
@@ -1130,8 +1131,8 @@ export default function BalanceSheetPage() {
           </button>
           <span className={`ml-auto text-[11px] font-semibold tabular-nums ${c.text}`}>{fmt(total)}</span>
         </div>
-        {items.length > 0 && items.map((g, gi) => g.entries.map((e, ei) => renderFloatEntry(e, gi, ei, type)))}
-        {items.length === 0 && (
+        {hasEntries && items.map((g, gi) => g.entries.map((e, ei) => renderFloatEntry(e, gi, ei, type)))}
+        {!hasEntries && (
           <div className="text-[11px] text-[#b0b0b5] text-center py-4">暂无数据，点击 + 添加</div>
         )}
       </div>
