@@ -40,7 +40,7 @@ interface SheetStore {
   [month: string]: SheetData;
 }
 
-const STORAGE_KEY = "balance_sheet_store";
+// 数据直接来自 API，不缓存到 localStorage
 const GROUP_TYPES = [
   { value: "cash", label: "现金类" },
   { value: "fund", label: "基金" },
@@ -105,39 +105,24 @@ function nextMonth(m: string): string {
   return d.toISOString().slice(0, 7);
 }
 
-function loadStore(): SheetStore {
-  if (typeof window === "undefined") return {};
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw) as SheetStore;
-  } catch { /* ignore */ }
-  return {};
-}
 
 
-
-function saveStore(s: SheetStore) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch { /* ignore */ }
-}
-
-async function loadFromAPI(): Promise<SheetData | null> {
+async function loadFromAPI(month: string): Promise<SheetData | null> {
   if (!isLoggedIn()) return null;
   try {
-    const [assetCats, liabilityCats, incomeCats, expenseCats] = await Promise.all([
-      financeApi.listAssetCategories(),
-      financeApi.listLiabilityCategories(),
-      financeApi.listTransactionCategories(1),
-      financeApi.listTransactionCategories(2),
+    const [assetCats, liabilityCats] = await Promise.all([
+      financeApi.listAssetCategories(month),
+      financeApi.listLiabilityCategories(month),
     ]);
 
     const [assetsRes, liabilitiesRes] = await Promise.all([
-      financeApi.listAssets(),
-      financeApi.listLiabilities(),
+      financeApi.listAssets(undefined, month),
+      financeApi.listLiabilities(undefined, month),
     ]);
 
-    const now = new Date();
-    const startDate = Math.floor(new Date(now.getFullYear(), now.getMonth(), 1).getTime() / 1000);
-    const endDate = Math.floor(new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).getTime() / 1000);
+    const d = new Date(month + "-01");
+    const startDate = Math.floor(new Date(d.getFullYear(), d.getMonth(), 1).getTime() / 1000);
+    const endDate = Math.floor(new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59).getTime() / 1000);
 
     const [incomeTxRes, expenseTxRes] = await Promise.all([
       financeApi.listTransactions({ type: 1, start_date: startDate, end_date: endDate, page_size: 1000 }),
@@ -190,11 +175,25 @@ async function loadFromAPI(): Promise<SheetData | null> {
       return groups;
     }
 
+    function buildTxGroups(
+      items: { transaction_id?: string; description: string; amount: number }[],
+      typeVal: string,
+    ): Group[] {
+      const entries = items.map((t) => ({
+        id: t.transaction_id || typeVal,
+        name: t.description,
+        amount: t.amount,
+        transaction_id: t.transaction_id,
+      }));
+      if (entries.length === 0) return [];
+      return [{ id: `tx_${typeVal}`, label: typeVal === "income" ? "其他收入" : "其他开支", type: typeVal, entries }];
+    }
+
     return {
       assets: buildGroups(assetCats.categories ?? [], assetsRes.assets ?? [], "cash"),
       liabilities: buildGroups(liabilityCats.categories ?? [], liabilitiesRes.liabilities ?? [], "loan"),
-      income: buildGroups(incomeCats.categories ?? [], (incomeTxRes.transactions ?? []).map((t) => ({ ...t, name: t.description })), "income"),
-      expenses: buildGroups(expenseCats.categories ?? [], (expenseTxRes.transactions ?? []).map((t) => ({ ...t, name: t.description })), "expense"),
+      income: buildTxGroups(incomeTxRes.transactions ?? [], "income"),
+      expenses: buildTxGroups(expenseTxRes.transactions ?? [], "expense"),
     };
   } catch {
     return null;
@@ -284,23 +283,6 @@ async function syncTransactionToAPI(type: 1 | 2, categoryId: string, entry: Entr
   return null;
 }
 
-async function syncTransactionCategoryToAPI(apiType: 1 | 2, group: Group, action: "create" | "update" | "delete"): Promise<string | null> {
-  if (!isLoggedIn()) return null;
-  try {
-    if (action === "create") {
-      const res = await financeApi.createTransactionCategory({ name: group.label, type: apiType, sort_order: group.sort_order || 0 });
-      return res.category_id;
-    } else if (action === "update") {
-      await financeApi.updateTransactionCategory(group.id, { name: group.label, sort_order: group.sort_order });
-      return group.id;
-    } else if (action === "delete") {
-      await financeApi.deleteTransactionCategory(group.id);
-      return null;
-    }
-  } catch { /* background sync, ignore */ }
-  return null;
-}
-
 function fmt(n: number): string {
   return "¥ " + n.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
@@ -345,6 +327,72 @@ function DragHandle({ className = "" }: { className?: string }) {
     <div className={`flex flex-col gap-0.5 cursor-grab active:cursor-grabbing ${className}`}>
       <div className="flex gap-0.5"><span className="w-0.5 h-0.5 rounded-full bg-current" /><span className="w-0.5 h-0.5 rounded-full bg-current" /><span className="w-0.5 h-0.5 rounded-full bg-current" /></div>
       <div className="flex gap-0.5"><span className="w-0.5 h-0.5 rounded-full bg-current" /><span className="w-0.5 h-0.5 rounded-full bg-current" /><span className="w-0.5 h-0.5 rounded-full bg-current" /></div>
+    </div>
+  );
+}
+
+function EditFormFields({ editForm, onFieldChange, editing, addingTo, groupType, onCancel, onSave, onDelete }: {
+  editForm: { name: string; amount: string; code: string; quantity: string };
+  onFieldChange: (field: string, value: string) => void;
+  editing: boolean;
+  addingTo: { section: Section; groupIdx: number } | null;
+  groupType: string;
+  onCancel: () => void;
+  onSave: () => void;
+  onDelete?: () => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => { if (addingTo) inputRef.current?.focus(); }, [addingTo]);
+  const isStockFund = groupType === "stock" || groupType === "fund";
+
+  function onChange(field: string, value: string) {
+    if (field === "amount" || field === "quantity") {
+      if (value !== "" && !/^\d*\.?\d*$/.test(value)) return;
+    }
+    onFieldChange(field, value);
+  }
+
+  return (
+    <div className="space-y-2.5" onClick={(e) => e.stopPropagation()}>
+      <div className="flex items-center gap-2">
+        {editing && <DragHandle className="text-[#d2d2d7]" />}
+        <input ref={inputRef} value={editForm.name}
+          onChange={(e) => onChange("name", e.target.value)}
+          placeholder="名称"
+          className={`flex-1 ${INPUT_CLS}`} />
+        <div className="relative">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[12px] text-[#86868b]">¥</span>
+          <input value={editForm.amount}
+            onChange={(e) => onChange("amount", e.target.value)}
+            placeholder="金额" inputMode="decimal"
+            className={`w-[120px] pl-7 pr-3 ${INPUT_CLS}`} />
+        </div>
+      </div>
+      {isStockFund && (
+        <div className="flex items-center gap-2">
+          {editing && <DragHandle className="text-transparent" />}
+          <input value={editForm.code}
+            onChange={(e) => onChange("code", e.target.value)}
+            placeholder={groupType === "stock" ? "股票代码" : "基金代码"}
+            className={`flex-1 ${INPUT_CLS}`} />
+          <input value={editForm.quantity}
+            onChange={(e) => onChange("quantity", e.target.value)}
+            placeholder={groupType === "stock" ? "持仓数量" : "持有份额"} inputMode="decimal"
+            className={`w-[120px] ${INPUT_CLS}`} />
+        </div>
+      )}
+      <div className="flex items-center justify-end gap-2 pt-1">
+        <button onClick={onCancel}
+          className="rounded-lg px-3 py-1.5 text-[12px] text-[#86868b] transition-colors hover:bg-[#f5f5f7] cursor-pointer">取消</button>
+        {editing && onDelete && (
+          <button onClick={(e) => { e.stopPropagation(); onDelete(); }}
+            className="rounded-lg px-3 py-1.5 text-[12px] text-red-500 transition-colors hover:bg-red-50 cursor-pointer">删除</button>
+        )}
+        <button onClick={(e) => { e.stopPropagation(); onSave(); }}
+          className="rounded-lg bg-[#0071e3] px-4 py-1.5 text-[12px] font-medium text-white transition-colors hover:bg-[#0077ed] cursor-pointer">
+          {addingTo ? "添加" : "保存"}
+        </button>
+      </div>
     </div>
   );
 }
@@ -436,7 +484,7 @@ function renderPreviewTable(
 export default function BalanceSheetPage() {
   const router = useRouter();
   const [store, setStore] = useState<SheetStore>({});
-  const [ready, setReady] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [activeMonth, setActiveMonth] = useState(currentMonth());
   const [editing, setEditing] = useState(false);
   const [editEntry, setEditEntry] = useState<{ section: Section; groupIdx: number; entryIdx: number } | null>(null);
@@ -463,30 +511,28 @@ export default function BalanceSheetPage() {
   const [calendarYear, setCalendarYear] = useState(() => new Date().getFullYear());
   const syncedIdsRef = useRef<Set<string>>(new Set());
   useEffect(() => {
-    const saved = loadStore();
-    const month = currentMonth();
-    if (!saved[month]) {
-      saved[month] = defaultSheet();
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(saved)); } catch { /* ignore */ }
+    if (store[activeMonth]) {
+      syncedIdsRef.current = collectIds(store[activeMonth]);
+      return;
     }
-    loadFromAPI().then((apiData) => {
+    setLoading(true);
+    loadFromAPI(activeMonth).then((apiData) => {
       if (apiData) {
-        saved[month] = apiData;
-        saveStore(saved);
-        const ids = new Set<string>();
-        for (const g of apiData.assets) { ids.add(g.id); for (const e of g.entries) ids.add(e.id); }
-        for (const g of apiData.liabilities) { ids.add(g.id); for (const e of g.entries) ids.add(e.id); }
-        for (const g of apiData.income) { if (!g.id.startsWith("orphan_")) ids.add(g.id); for (const e of g.entries) { ids.add(e.id); if (e.transaction_id) ids.add(e.transaction_id); } }
-        for (const g of apiData.expenses) { if (!g.id.startsWith("orphan_")) ids.add(g.id); for (const e of g.entries) { ids.add(e.id); if (e.transaction_id) ids.add(e.transaction_id); } }
-        syncedIdsRef.current = ids;
+        setStore((prev) => ({ ...prev, [activeMonth]: apiData }));
+        syncedIdsRef.current = collectIds(apiData);
       }
-      setStore(saved);
-      setReady(true);
+      setLoading(false);
     });
-  }, []);
-  useEffect(() => {
-    saveStore(store);
-  }, [store]);
+  }, [activeMonth]);
+
+  function collectIds(data: SheetData): Set<string> {
+    const ids = new Set<string>();
+    for (const g of data.assets) { ids.add(g.id); for (const e of g.entries) ids.add(e.id); }
+    for (const g of data.liabilities) { ids.add(g.id); for (const e of g.entries) ids.add(e.id); }
+    for (const g of data.income) { if (!g.id.startsWith("orphan_")) ids.add(g.id); for (const e of g.entries) { ids.add(e.id); if (e.transaction_id) ids.add(e.transaction_id); } }
+    for (const g of data.expenses) { if (!g.id.startsWith("orphan_")) ids.add(g.id); for (const e of g.entries) { ids.add(e.id); if (e.transaction_id) ids.add(e.transaction_id); } }
+    return ids;
+  }
 
 
   useEffect(() => {
@@ -508,23 +554,12 @@ export default function BalanceSheetPage() {
     if (key === "home") router.push("/home");
   }
 
-  function ensureMonth(m: string): SheetData {
-    if (!store[m]) {
-      setStore((prev) => ({ ...prev, [m]: defaultSheet() }));
-    }
-    return { ...defaultSheet(), ...store[m] };
-  }
-
   function goPrevMonth() {
-    const prev = prevMonth(activeMonth);
-    ensureMonth(prev);
-    setActiveMonth(prev);
+    setActiveMonth(prevMonth(activeMonth));
   }
 
   function goNextMonth() {
-    const next = nextMonth(activeMonth);
-    ensureMonth(next);
-    setActiveMonth(next);
+    setActiveMonth(nextMonth(activeMonth));
   }
 
   function updateData(mutator: (d: SheetData) => SheetData) {
@@ -670,11 +705,8 @@ export default function BalanceSheetPage() {
       applyEdit(section, (groups) => {
         groups[groupIdx].label = renameValue.trim();
       });
-      if (group && isLoggedIn() && syncedIdsRef.current.has(group.id)) {
-        const p = section === "income" || section === "expenses"
-          ? syncTransactionCategoryToAPI(section === "income" ? 1 : 2, { ...group, label: renameValue.trim() }, "update")
-          : syncGroupToAPI(section, { ...group, label: renameValue.trim() }, "update");
-        p.then((newId) => { if (newId) syncedIdsRef.current.add(newId); });
+      if (group && isLoggedIn() && syncedIdsRef.current.has(group.id) && section !== "income" && section !== "expenses") {
+        syncGroupToAPI(section, { ...group, label: renameValue.trim() }, "update").then((newId) => { if (newId) syncedIdsRef.current.add(newId); });
       }
     }
     setRenamingGroup(null);
@@ -696,10 +728,11 @@ export default function BalanceSheetPage() {
             }
             syncedIdsRef.current.delete(entry.id);
           }
-          const p = section === "income" || section === "expenses"
-            ? syncTransactionCategoryToAPI(section === "income" ? 1 : 2, group, "delete")
-            : syncGroupToAPI(section, group, "delete");
-          p.then(() => syncedIdsRef.current.delete(group.id));
+          if (section !== "income" && section !== "expenses") {
+            syncGroupToAPI(section, group, "delete").then(() => syncedIdsRef.current.delete(group.id));
+          } else {
+            syncedIdsRef.current.delete(group.id);
+          }
         }
         applyEdit(section, (groups) => { groups.splice(groupIdx, 1); });
         setConfirmAction(null);
@@ -721,12 +754,9 @@ export default function BalanceSheetPage() {
     setShowAddGroup(null);
     setAddGroupForm({ label: "", type: "cash" });
 
-    if (isLoggedIn()) {
+    if (isLoggedIn() && section !== "income" && section !== "expenses") {
       const newGroup: Group = { id: tempId, label, type: addGroupForm.type, entries: [] };
-      const p = section === "income" || section === "expenses"
-        ? syncTransactionCategoryToAPI(section === "income" ? 1 : 2, newGroup, "create")
-        : syncGroupToAPI(section, newGroup, "create");
-      p.then((newId) => {
+      syncGroupToAPI(section, newGroup, "create").then((newId) => {
         if (newId && newId !== tempId) {
           syncedIdsRef.current.add(newId);
           setStore(prev => {
@@ -812,50 +842,6 @@ export default function BalanceSheetPage() {
     };
   }
 
-  function EditFormFields({ groupType }: { groupType: string }) {
-    const isStockFund = groupType === "stock" || groupType === "fund";
-    return (
-      <div className="space-y-2.5" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center gap-2">
-          {editing && <DragHandle className="text-[#d2d2d7]" />}
-          <input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-            placeholder="名称"
-            className={`flex-1 ${INPUT_CLS}`}
-            {...(editing && addingTo ? { autoFocus: true } : {})} />
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[12px] text-[#86868b]">¥</span>
-            <input value={editForm.amount} onChange={(e) => setEditForm({ ...editForm, amount: e.target.value })}
-              placeholder="金额" type="number"
-              className={`w-[120px] pl-7 pr-3 ${INPUT_CLS}`} />
-          </div>
-        </div>
-        {isStockFund && (
-          <div className="flex items-center gap-2">
-            {editing && <DragHandle className="text-transparent" />}
-            <input value={editForm.code} onChange={(e) => setEditForm({ ...editForm, code: e.target.value })}
-              placeholder={groupType === "stock" ? "股票代码" : "基金代码"}
-              className={`flex-1 ${INPUT_CLS}`} />
-            <input value={editForm.quantity} onChange={(e) => setEditForm({ ...editForm, quantity: e.target.value })}
-              placeholder={groupType === "stock" ? "持仓数量" : "持有份额"} type="number"
-              className={`w-[120px] ${INPUT_CLS}`} />
-          </div>
-        )}
-        <div className="flex items-center justify-end gap-2 pt-1">
-          <button onClick={cancelEdit}
-            className="rounded-lg px-3 py-1.5 text-[12px] text-[#86868b] transition-colors hover:bg-[#f5f5f7] cursor-pointer">取消</button>
-          {editing && editEntry && (
-            <button onClick={(e) => { e.stopPropagation(); deleteEntry(editEntry.section, editEntry.groupIdx, editEntry.entryIdx); }}
-              className="rounded-lg px-3 py-1.5 text-[12px] text-red-500 transition-colors hover:bg-red-50 cursor-pointer">删除</button>
-          )}
-          <button onClick={(e) => { e.stopPropagation(); saveEdit(); }}
-            className="rounded-lg bg-[#0071e3] px-4 py-1.5 text-[12px] font-medium text-white transition-colors hover:bg-[#0077ed] cursor-pointer">
-            {addingTo ? "添加" : "保存"}
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   function renderEntryActions(opts: { section: Section; groupIdx: number; entryIdx: number; entry: Entry; g: Group }) {
     const { section, groupIdx, entryIdx, entry, g } = opts;
     const editingThis = editEntry?.section === section && editEntry?.groupIdx === groupIdx && editEntry?.entryIdx === entryIdx;
@@ -870,7 +856,10 @@ export default function BalanceSheetPage() {
         onClick={() => editing && !editingThis && openEdit(section, groupIdx, entryIdx, entry)}
       >
         {editingThis ? (
-          <EditFormFields groupType={g.type} />
+          <EditFormFields editForm={editForm} onFieldChange={(f, v) => setEditForm(p => ({ ...p, [f]: v }))}
+            editing={editing} addingTo={addingTo} groupType={g.type}
+            onCancel={cancelEdit} onSave={saveEdit}
+            onDelete={editEntry ? () => deleteEntry(editEntry.section, editEntry.groupIdx, editEntry.entryIdx) : undefined} />
         ) : (
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5 flex-1 min-w-0">
@@ -919,7 +908,8 @@ export default function BalanceSheetPage() {
               {icon}
             </span>
             {isRenaming ? (
-              <input value={renameValue} onChange={(e) => setRenameValue(e.target.value)}
+              <input value={renameValue}
+                onChange={(e) => setRenameValue(e.target.value)}
                 onBlur={saveRename} onKeyDown={(e) => { if (e.key === "Enter") saveRename(); if (e.key === "Escape") setRenamingGroup(null); }}
                 className="rounded-lg border border-[#0071e3] px-2 py-1 text-[14px] font-semibold outline-none focus:ring-[3px] focus:ring-[#0071e3]/20 bg-white min-w-0"
                 autoFocus onClick={(e) => e.stopPropagation()} />
@@ -956,7 +946,9 @@ export default function BalanceSheetPage() {
           {g.entries.map((entry, entryIdx) => renderEntryActions({ section, groupIdx, entryIdx, entry, g }))}
           {isAdding && (
             <div className="px-5 py-3 bg-[#fafafa]">
-              <EditFormFields groupType={g.type} />
+              <EditFormFields editForm={editForm} onFieldChange={(f, v) => setEditForm(p => ({ ...p, [f]: v }))}
+                editing={editing} addingTo={addingTo} groupType={g.type}
+                onCancel={cancelEdit} onSave={saveEdit} />
             </div>
           )}
         </div>
@@ -1006,51 +998,57 @@ export default function BalanceSheetPage() {
     const groups = getGroups(sheet, section);
     const entry = groups[groupIdx]?.entries[entryIdx];
     const apiType = section === "income" ? 1 : 2;
+    const catId = groups[groupIdx]?.id;
+    const name = floatForm.name || entry?.name || "";
+    const amount = parseFloat(floatForm.amount) || 0;
+
     applyEdit(section, (groups) => {
       const e = groups[groupIdx]?.entries[entryIdx];
       if (e) {
-        e.name = floatForm.name || e.name;
-        e.amount = parseFloat(floatForm.amount) || 0;
+        e.name = name;
+        e.amount = amount;
       }
     });
     setFloatEdit(null);
 
-    if (entry) {
-      const updated = { ...entry, name: floatForm.name || entry.name, amount: parseFloat(floatForm.amount) || entry.amount };
-      if (entry.transaction_id) {
-        syncTransactionToAPI(apiType, "", updated, "update");
-      } else {
-        const catId = groups[groupIdx]?.id;
-        if (catId && !catId.startsWith("e_")) {
-          syncTransactionToAPI(apiType, catId, updated, "create").then((newId) => {
-            if (newId) {
-              syncedIdsRef.current.add(newId);
-              setStore((prev) => {
-                const data = prev[activeMonth];
-                if (!data) return prev;
-                const items = section === "income" ? data.income : data.expenses;
-                const grp = items[groupIdx];
-                if (grp) {
-                  const e = grp.entries[entryIdx];
-                  if (e) {
-                    e.id = newId;
-                    e.transaction_id = newId;
-                  }
-                }
-                return { ...prev };
-              });
+    if (!entry) return;
+    const updated = { ...entry, name, amount };
+    if (entry.transaction_id) {
+      syncTransactionToAPI(apiType, "", updated, "update");
+    } else {
+      syncTransactionToAPI(apiType, catId ?? "", updated, "create").then((newId) => {
+        if (newId && newId !== entry.id) {
+          syncedIdsRef.current.add(newId);
+          setStore((prev) => {
+            const data = prev[activeMonth];
+            if (!data) return prev;
+            const items = section === "income" ? data.income : data.expenses;
+            const grp = items[groupIdx];
+            if (grp) {
+              const e = grp.entries[entryIdx];
+              if (e) {
+                e.id = newId;
+                e.transaction_id = newId;
+              }
             }
+            return { ...prev };
           });
         }
-      }
+      });
     }
   }
 
   function deleteFloatEntry(section: "income" | "expenses", groupIdx: number, entryIdx: number) {
     const groups = getGroups(sheet, section);
     const entry = groups[groupIdx]?.entries[entryIdx];
-    if (entry?.transaction_id) {
-      syncTransactionToAPI(section === "income" ? 1 : 2, "", entry, "delete");
+    const apiType = section === "income" ? 1 : 2;
+
+    if (entry) {
+      if (entry.transaction_id) {
+        syncTransactionToAPI(apiType, "", entry, "delete");
+      } else if (!entry.id.startsWith("e_")) {
+        syncTransactionToAPI(apiType, "", entry, "delete");
+      }
     }
     applyEdit(section, (groups) => {
       groups[groupIdx].entries.splice(entryIdx, 1);
@@ -1078,11 +1076,16 @@ export default function BalanceSheetPage() {
         className="group flex items-center justify-between py-1.5 px-3 rounded-lg hover:bg-[#f5f5f7] transition-colors cursor-pointer">
         {editingThis ? (
           <div className="flex items-center gap-1.5 w-full" onClick={(e) => e.stopPropagation()}>
-            <input value={floatForm.name} onChange={(e) => setFloatForm({ ...floatForm, name: e.target.value })}
-              placeholder="名称" autoFocus
+            <input value={floatForm.name}
+              onChange={(e) => setFloatForm({ ...floatForm, name: e.target.value })}
+              placeholder="名称"
               className={`flex-1 min-w-0 ${INPUT_SM_CLS}`} />
-            <input value={floatForm.amount} onChange={(e) => setFloatForm({ ...floatForm, amount: e.target.value })}
-              placeholder="金额" type="number"
+            <input value={floatForm.amount}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v === "" || /^\d*\.?\d*$/.test(v)) setFloatForm({ ...floatForm, amount: v });
+              }}
+              placeholder="金额" inputMode="decimal"
               className={`w-[72px] text-right ${INPUT_SM_CLS}`} />
             <button onClick={() => { saveFloatEdit(); }}
               className="flex h-6 w-6 items-center justify-center rounded-md bg-[#0071e3] text-white hover:bg-[#0077ed] cursor-pointer shrink-0">
@@ -1169,12 +1172,11 @@ export default function BalanceSheetPage() {
 
         <DashboardHeader activeNav="assets-and-liabilities" navItems={navItems} />
 
-        {!ready ? (
+        {loading ? (
           <main className="relative flex-1 overflow-y-auto z-10 mx-auto w-full max-w-[1080px] px-6 pt-6 pb-20">
             <div className="flex items-center justify-center h-64 text-[14px] text-[#86868b]">加载中...</div>
           </main>
         ) : (
-
         <main className="relative flex-1 overflow-y-auto z-10 mx-auto w-full max-w-[1080px] px-6 pt-6 pb-20">
 
           {/* ── Header ── */}
@@ -1476,7 +1478,8 @@ export default function BalanceSheetPage() {
             <div className="mt-5 space-y-4">
               <div>
                 <label className="block text-[12px] font-medium text-[#6e6e73] mb-1.5">分组名称</label>
-                <input value={addGroupForm.label} onChange={(e) => setAddGroupForm({ ...addGroupForm, label: e.target.value })}
+                <input value={addGroupForm.label}
+                  onChange={(e) => setAddGroupForm({ ...addGroupForm, label: e.target.value })}
                   placeholder="如：基金、股票、房贷" autoFocus
                   className="w-full rounded-xl border border-[#d2d2d7] px-4 py-3 text-[14px] outline-none placeholder:text-[#86868b] focus:border-[#0071e3] focus:ring-[3px] focus:ring-[#0071e3]/20 bg-white" />
               </div>

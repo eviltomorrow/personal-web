@@ -183,8 +183,9 @@ export const authApi = {
 
 export const financeApi = {
   // Asset Categories
-  listAssetCategories(): Promise<{ categories: AssetCategory[] }> {
-    return request("GET", "/finance/asset-categories");
+  listAssetCategories(month?: string): Promise<{ categories: AssetCategory[] }> {
+    const qs = month ? `?month=${month}` : "";
+    return request("GET", `/finance/asset-categories${qs}`);
   },
   createAssetCategory(data: { name: string; icon?: string; sort_order?: number }): Promise<{ category_id: string }> {
     return request("POST", "/finance/asset-categories", data);
@@ -197,9 +198,12 @@ export const financeApi = {
   },
 
   // Assets
-  listAssets(categoryId?: string): Promise<{ assets: Asset[] }> {
-    const qs = categoryId ? `?category_id=${categoryId}` : "";
-    return request("GET", `/finance/assets${qs}`);
+  listAssets(categoryId?: string, month?: string): Promise<{ assets: Asset[] }> {
+    const params = new URLSearchParams();
+    if (categoryId) params.set("category_id", categoryId);
+    if (month) params.set("month", month);
+    const qs = params.toString();
+    return request("GET", `/finance/assets${qs ? `?${qs}` : ""}`);
   },
   createAsset(data: { category_id: string; name: string; amount: number; currency?: string; as_of_date?: number; notes?: string }): Promise<{ asset_id: string }> {
     return request("POST", "/finance/assets", { currency: "CNY", ...data });
@@ -212,8 +216,9 @@ export const financeApi = {
   },
 
   // Liability Categories
-  listLiabilityCategories(): Promise<{ categories: LiabilityCategory[] }> {
-    return request("GET", "/finance/liability-categories");
+  listLiabilityCategories(month?: string): Promise<{ categories: LiabilityCategory[] }> {
+    const qs = month ? `?month=${month}` : "";
+    return request("GET", `/finance/liability-categories${qs}`);
   },
   createLiabilityCategory(data: { name: string; icon?: string; sort_order?: number }): Promise<{ category_id: string }> {
     return request("POST", "/finance/liability-categories", data);
@@ -226,9 +231,12 @@ export const financeApi = {
   },
 
   // Liabilities
-  listLiabilities(categoryId?: string): Promise<{ liabilities: Liability[] }> {
-    const qs = categoryId ? `?category_id=${categoryId}` : "";
-    return request("GET", `/finance/liabilities${qs}`);
+  listLiabilities(categoryId?: string, month?: string): Promise<{ liabilities: Liability[] }> {
+    const params = new URLSearchParams();
+    if (categoryId) params.set("category_id", categoryId);
+    if (month) params.set("month", month);
+    const qs = params.toString();
+    return request("GET", `/finance/liabilities${qs ? `?${qs}` : ""}`);
   },
   createLiability(data: { category_id: string; name: string; amount: number; currency?: string; interest_rate?: number; due_date?: number; notes?: string }): Promise<{ liability_id: string }> {
     return request("POST", "/finance/liabilities", { currency: "CNY", ...data });
