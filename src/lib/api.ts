@@ -90,7 +90,7 @@ export function stopTokenRefresh() {
   }
 }
 
-class ApiError extends Error {
+export class ApiError extends Error {
   constructor(public code: number, message: string) {
     super(message);
     this.name = "ApiError";

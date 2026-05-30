@@ -6,7 +6,9 @@ import Sidebar from "@/components/sidebar";
 import DashboardHeader from "@/components/dashboard-header";
 
 import { I, navItems } from "@/components/icons";
-import { financeApi, isLoggedIn } from "@/lib/api";
+import { financeApi, isLoggedIn, ApiError } from "@/lib/api";
+
+let onSyncError: ((msg: string) => void) | null = null;
 
 interface Entry {
   id: string;
@@ -231,7 +233,10 @@ async function syncGroupToAPI(section: Section, group: Group, action: "create" |
         return null;
       }
     }
-  } catch { /* background sync, ignore */ }
+  } catch (e) {
+    const msg = e instanceof ApiError ? e.message : String(e);
+    onSyncError?.(`保存分组失败：${msg}`);
+  }
   return null;
 }
 
@@ -261,7 +266,10 @@ async function syncEntryToAPI(section: Section, categoryId: string, entry: Entry
         return null;
       }
     }
-  } catch { /* background sync, ignore */ }
+  } catch (e) {
+    const msg = e instanceof ApiError ? e.message : String(e);
+    onSyncError?.(`保存条目失败：${msg}`);
+  }
   return null;
 }
 
@@ -285,7 +293,10 @@ async function syncTransactionToAPI(type: 1 | 2, categoryId: string, entry: Entr
       await financeApi.deleteTransaction(entry.id);
       return null;
     }
-  } catch { /* background sync, ignore */ }
+  } catch (e) {
+    const msg = e instanceof ApiError ? e.message : String(e);
+    onSyncError?.(`保存交易失败：${msg}`);
+  }
   return null;
 }
 
@@ -554,6 +565,11 @@ export default function BalanceSheetPage() {
     }
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  useEffect(() => {
+    onSyncError = setAlertMsg;
+    return () => { onSyncError = null; };
   }, []);
 
   function handleNavChange(key: string) {
