@@ -2,7 +2,7 @@
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "/api/v1";
 
-export function getAccessToken(): string | null {
+function getAccessToken(): string | null {
   if (typeof window === "undefined") return null;
   return localStorage.getItem("access_token");
 }
@@ -151,13 +151,13 @@ async function request<T>(method: string, path: string, body?: unknown, auth = t
   return json.data as T;
 }
 
-export interface LoginResult {
+interface LoginResult {
   access_token: string;
   refresh_token: string;
   expires_in: number;
 }
 
-export interface AssetCategory {
+interface AssetCategory {
   category_id: string;
   user_id: string;
   name: string;
@@ -167,7 +167,7 @@ export interface AssetCategory {
   updated_at: number;
 }
 
-export interface Asset {
+interface Asset {
   asset_id: string;
   user_id: string;
   category_id: string;
@@ -180,7 +180,7 @@ export interface Asset {
   updated_at: number;
 }
 
-export interface LiabilityCategory {
+interface LiabilityCategory {
   category_id: string;
   user_id: string;
   name: string;
@@ -190,7 +190,7 @@ export interface LiabilityCategory {
   updated_at: number;
 }
 
-export interface Liability {
+interface Liability {
   liability_id: string;
   user_id: string;
   category_id: string;
@@ -204,7 +204,7 @@ export interface Liability {
   updated_at: number;
 }
 
-export interface Transaction {
+interface Transaction {
   transaction_id: string;
   user_id: string;
   category_id: string;
