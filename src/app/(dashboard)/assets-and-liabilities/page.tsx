@@ -1211,7 +1211,7 @@ export default function BalanceSheetPage() {
                 </span>
               </div>
               <p className="mt-0.5 text-[13px] text-[#6e6e73]">
-                数据自动保存至本地 {editing && <span className="text-[#ff9f0a]">· 编辑模式（拖拽排序）</span>}
+                {editing && <span className="text-[#ff9f0a]">编辑模式（拖拽排序）</span>}
               </p>
             </div>
             <button onClick={() => { setEditing(!editing); cancelEdit(); setShowAddGroup(null); }}

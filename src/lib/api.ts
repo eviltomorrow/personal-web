@@ -219,6 +219,11 @@ interface Transaction {
   updated_at: number;
 }
 
+interface Profile {
+  nickname?: string; email?: string; phone?: string; region?: string;
+  bio?: string; gender?: string; birthday?: string; avatar?: string; website?: string;
+}
+
 // ── Auth API ──
 
 export const authApi = {
@@ -229,6 +234,17 @@ export const authApi = {
 
   register(authType: "email" | "phone" | "username", identifier: string, password: string): Promise<LoginResult> {
     return request<LoginResult>("POST", "/auth/register", { auth_type: authType, identifier, password });
+  },
+
+  getProfile(): Promise<Profile> {
+    return request<Profile>("GET", "/auth/profile");
+  },
+
+  updateProfile(data: {
+    nickname?: string; email?: string; phone?: string; region?: string;
+    bio?: string; gender?: string; birthday?: string; avatar?: string; website?: string;
+  }): Promise<Profile> {
+    return request<Profile>("PUT", "/auth/profile", data);
   },
 
   async revokeToken(refreshToken: string): Promise<void> {

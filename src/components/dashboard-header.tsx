@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useUser } from "@/lib/user-context";
 import { I, type NavItem } from "./icons";
 
@@ -20,6 +21,7 @@ export default function DashboardHeader({
   activeNav: string;
   navItems: NavItem[];
 }) {
+  const router = useRouter();
   const { logout } = useUser();
   const [bellOpen, setBellOpen] = useState(false);
   const [avatarOpen, setAvatarOpen] = useState(false);
@@ -92,6 +94,15 @@ export default function DashboardHeader({
 
           {avatarOpen && (
             <div className="absolute right-0 top-10 w-44 rounded-2xl border border-[#d2d2d7]/80 bg-white/95 py-2 shadow-lg backdrop-blur-xl z-50 overflow-hidden">
+              <button onClick={() => { setAvatarOpen(false); router.push("/profile"); }}
+                className="flex w-full items-center gap-3 px-4 py-2.5 text-[13px] text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7] cursor-pointer"
+              >
+                <svg viewBox="0 0 16 16" fill="none" className="h-4 w-4 shrink-0" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M12 14v-1a3 3 0 00-3-3H7a3 3 0 00-3 3v1M8 7a2 2 0 100-4 2 2 0 000 4z" />
+                </svg>
+                个人信息
+              </button>
+              <div className="mx-3 my-1 border-t border-[#f0f0f0]" />
               <button onClick={handleLogout}
                 className="flex w-full items-center gap-3 px-4 py-2.5 text-[13px] text-red-500 transition-colors hover:bg-red-50 cursor-pointer"
               >
