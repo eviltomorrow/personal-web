@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useUser } from "@/lib/user-context";
 import { I, type NavItem } from "./icons";
 
@@ -21,7 +20,6 @@ export default function DashboardHeader({
   activeNav: string;
   navItems: NavItem[];
 }) {
-  const router = useRouter();
   const { logout } = useUser();
   const [bellOpen, setBellOpen] = useState(false);
   const [avatarOpen, setAvatarOpen] = useState(false);
@@ -44,7 +42,7 @@ export default function DashboardHeader({
   async function handleLogout() {
     setAvatarOpen(false);
     await logout();
-    router.push("/login");
+    window.location.href = "/login";
   }
 
   return (

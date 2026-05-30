@@ -8,7 +8,7 @@ interface UserContextType {
   loading: boolean;
   login: (identifier: string, password: string) => Promise<void>;
   register: (authType: "email" | "phone" | "username", identifier: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 const UserContext = createContext<UserContextType>({
@@ -16,7 +16,7 @@ const UserContext = createContext<UserContextType>({
   loading: true,
   login: async () => {},
   register: async () => {},
-  logout: () => {},
+  logout: async () => {},
 });
 
 export function UserProvider({ children }: { children: React.ReactNode }) {

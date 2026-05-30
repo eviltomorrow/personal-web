@@ -238,7 +238,14 @@ export const authApi = {
   },
 
   revokeToken(refreshToken: string): Promise<void> {
-    return request<void>("POST", "/auth/token/revoke", { refresh_token: refreshToken }, false);
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    const token = getAccessToken();
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    return fetch(`${API_BASE}/auth/token/revoke`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    }).then(() => {});
   },
 
 };
