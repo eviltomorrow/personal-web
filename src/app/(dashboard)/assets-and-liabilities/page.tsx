@@ -106,6 +106,10 @@ function nextMonth(m: string): string {
   return d.toISOString().slice(0, 7);
 }
 
+function monthStart(m: string): number {
+  return Math.floor(new Date(m + "-01").getTime() / 1000);
+}
+
 
 
 async function loadFromAPI(month: string): Promise<SheetData | null> {
@@ -231,15 +235,15 @@ async function syncGroupToAPI(section: Section, group: Group, action: "create" |
   return null;
 }
 
-async function syncEntryToAPI(section: Section, categoryId: string, entry: Entry, action: "create" | "update" | "delete"): Promise<string | null> {
+async function syncEntryToAPI(section: Section, categoryId: string, entry: Entry, action: "create" | "update" | "delete", month: string, sortOrder?: number): Promise<string | null> {
   if (!isLoggedIn()) return null;
   try {
     if (section === "assets") {
       if (action === "create") {
-        const res = await financeApi.createAsset({ category_id: categoryId, name: entry.name, amount: entry.amount });
+        const res = await financeApi.createAsset({ category_id: categoryId, name: entry.name, amount: entry.amount, as_of_date: monthStart(month), sort_order: sortOrder });
         return res.asset_id;
       } else if (action === "update") {
-        await financeApi.updateAsset(entry.id, { name: entry.name, amount: entry.amount });
+        await financeApi.updateAsset(entry.id, { name: entry.name, amount: entry.amount, as_of_date: monthStart(month), sort_order: sortOrder });
         return entry.id;
       } else if (action === "delete") {
         await financeApi.deleteAsset(entry.id);
@@ -247,10 +251,10 @@ async function syncEntryToAPI(section: Section, categoryId: string, entry: Entry
       }
     } else if (section === "liabilities") {
       if (action === "create") {
-        const res = await financeApi.createLiability({ category_id: categoryId, name: entry.name, amount: entry.amount });
+        const res = await financeApi.createLiability({ category_id: categoryId, name: entry.name, amount: entry.amount, as_of_date: monthStart(month), sort_order: sortOrder });
         return res.liability_id;
       } else if (action === "update") {
-        await financeApi.updateLiability(entry.id, { name: entry.name, amount: entry.amount });
+        await financeApi.updateLiability(entry.id, { name: entry.name, amount: entry.amount, as_of_date: monthStart(month), sort_order: sortOrder });
         return entry.id;
       } else if (action === "delete") {
         await financeApi.deleteLiability(entry.id);
@@ -261,7 +265,7 @@ async function syncEntryToAPI(section: Section, categoryId: string, entry: Entry
   return null;
 }
 
-async function syncTransactionToAPI(type: 1 | 2, categoryId: string, entry: Entry, action: "create" | "update" | "delete"): Promise<string | null> {
+async function syncTransactionToAPI(type: 1 | 2, categoryId: string, entry: Entry, action: "create" | "update" | "delete", month: string, sortOrder?: number): Promise<string | null> {
   if (!isLoggedIn()) return null;
   try {
     if (action === "create") {
@@ -269,12 +273,13 @@ async function syncTransactionToAPI(type: 1 | 2, categoryId: string, entry: Entr
         category_id: categoryId,
         type,
         amount: entry.amount,
-        transaction_date: Math.floor(Date.now() / 1000),
+        transaction_date: monthStart(month),
         description: entry.name,
+        sort_order: sortOrder,
       });
       return res.transaction_id;
     } else if (action === "update") {
-      await financeApi.updateTransaction(entry.id, { amount: entry.amount, description: entry.name });
+      await financeApi.updateTransaction(entry.id, { amount: entry.amount, description: entry.name, transaction_date: monthStart(month), sort_order: sortOrder });
       return entry.id;
     } else if (action === "delete") {
       await financeApi.deleteTransaction(entry.id);
@@ -627,7 +632,7 @@ export default function BalanceSheetPage() {
         syncEntryToAPI(section, catId, {
           ...entry, name: editForm.name || entry.name, amount: parseFloat(editForm.amount) || 0,
           code: editForm.code || undefined, quantity: editForm.quantity ? parseFloat(editForm.quantity) : undefined,
-        }, "update");
+        }, "update", activeMonth, entryIdx);
       }
     } else if (addingTo) {
       const { section, groupIdx } = addingTo;
@@ -645,7 +650,7 @@ export default function BalanceSheetPage() {
       if (g && isLoggedIn()) {
         const catId = g.id;
         if (!catId.startsWith("e_")) {
-          syncEntryToAPI(section, catId, { id: tempId, name: editForm.name || "新条目", amount: parseFloat(editForm.amount) || 0, code: editForm.code, quantity: editForm.quantity ? parseFloat(editForm.quantity) : undefined }, "create").then((newId) => {
+          syncEntryToAPI(section, catId, { id: tempId, name: editForm.name || "新条目", amount: parseFloat(editForm.amount) || 0, code: editForm.code, quantity: editForm.quantity ? parseFloat(editForm.quantity) : undefined }, "create", activeMonth, g.entries.length).then((newId) => {
             if (newId) {
               syncedIdsRef.current.add(newId);
               setStore(prev => {
@@ -672,9 +677,9 @@ export default function BalanceSheetPage() {
     const catId = groups[groupIdx]?.id || "";
     if (entry && isLoggedIn() && syncedIdsRef.current.has(entry.id)) {
       if (section === "income" || section === "expenses") {
-        syncTransactionToAPI(section === "income" ? 1 : 2, catId, entry, "delete");
+        syncTransactionToAPI(section === "income" ? 1 : 2, catId, entry, "delete", activeMonth);
       } else {
-        syncEntryToAPI(section, catId, entry, "delete");
+        syncEntryToAPI(section, catId, entry, "delete", activeMonth);
       }
       syncedIdsRef.current.delete(entry.id);
     }
@@ -723,9 +728,9 @@ export default function BalanceSheetPage() {
           for (const entry of group.entries) {
             if (!syncedIdsRef.current.has(entry.id)) continue;
             if (section === "income" || section === "expenses") {
-              syncTransactionToAPI(section === "income" ? 1 : 2, group.id, entry, "delete");
+              syncTransactionToAPI(section === "income" ? 1 : 2, group.id, entry, "delete", activeMonth);
             } else {
-              syncEntryToAPI(section, group.id, entry, "delete");
+              syncEntryToAPI(section, group.id, entry, "delete", activeMonth);
             }
             syncedIdsRef.current.delete(entry.id);
           }
@@ -1015,9 +1020,9 @@ export default function BalanceSheetPage() {
     if (!entry) return;
     const updated = { ...entry, name, amount };
     if (entry.transaction_id) {
-      syncTransactionToAPI(apiType, "", updated, "update");
+      syncTransactionToAPI(apiType, "", updated, "update", activeMonth, entryIdx);
     } else {
-      syncTransactionToAPI(apiType, catId ?? "", updated, "create").then((newId) => {
+      syncTransactionToAPI(apiType, catId ?? "", updated, "create", activeMonth, entryIdx).then((newId) => {
         if (newId && newId !== entry.id) {
           syncedIdsRef.current.add(newId);
           setStore((prev) => {
@@ -1046,9 +1051,9 @@ export default function BalanceSheetPage() {
 
     if (entry) {
       if (entry.transaction_id) {
-        syncTransactionToAPI(apiType, "", entry, "delete");
+        syncTransactionToAPI(apiType, "", entry, "delete", activeMonth);
       } else if (!entry.id.startsWith("e_")) {
-        syncTransactionToAPI(apiType, "", entry, "delete");
+        syncTransactionToAPI(apiType, "", entry, "delete", activeMonth);
       }
     }
     applyEdit(section, (groups) => {

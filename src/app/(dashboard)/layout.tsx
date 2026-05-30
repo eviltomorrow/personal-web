@@ -11,7 +11,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     setMounted(true);
   }, []);
 
-  if (mounted && !isLoggedIn()) {
+  if (!mounted) {
+    return <div className="min-h-screen bg-[#f5f5f7]" />;
+  }
+
+  if (!isLoggedIn()) {
     return <LoginPrompt />;
   }
 

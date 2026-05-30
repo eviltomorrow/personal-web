@@ -29,10 +29,10 @@ function decodeExpFromJWT(token: string): number | null {
   }
 }
 
-export function setTokens(access: string, refresh: string) {
+export function setTokens(access: string, refresh: string, expiresIn?: number) {
   localStorage.setItem("access_token", access);
   localStorage.setItem("refresh_token", refresh);
-  const exp = decodeExpFromJWT(access);
+  const exp = expiresIn ? Math.floor(Date.now() / 1000) + expiresIn : decodeExpFromJWT(access);
   if (exp) {
     localStorage.setItem("expires_at", String(exp));
   }
@@ -53,7 +53,7 @@ export function isLoggedIn(): boolean {
 }
 
 const REFRESH_INTERVAL_MS = 30_000;
-const REFRESH_WINDOW_SEC = 300;
+const REFRESH_WINDOW_SEC = 120;
 let refreshTimer: ReturnType<typeof setInterval> | null = null;
 
 async function tryProactiveRefresh(): Promise<void> {
@@ -61,17 +61,18 @@ async function tryProactiveRefresh(): Promise<void> {
   if (!exp) return;
   const nowSec = Math.floor(Date.now() / 1000);
   if (exp - nowSec > REFRESH_WINDOW_SEC) return;
+  const access = getAccessToken();
   const refresh = getRefreshToken();
   if (!refresh) return;
   try {
     const res = await fetch(`${API_BASE}/auth/token/refresh`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(access ? { Authorization: `Bearer ${access}` } : {}) },
       body: JSON.stringify({ refresh_token: refresh }),
     });
     const json: any = await res.json();
     if (json.code === 0 && json.data) {
-      setTokens(json.data.access_token, json.data.refresh_token);
+      setTokens(json.data.access_token, json.data.refresh_token, json.data.expires_in);
     }
   } catch {}
 }
@@ -97,18 +98,19 @@ class ApiError extends Error {
 }
 
 export async function refreshTokens(): Promise<boolean> {
+  const access = getAccessToken();
   const refresh = getRefreshToken();
   if (!refresh) return false;
   try {
     const res = await fetch(`${API_BASE}/auth/token/refresh`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(access ? { Authorization: `Bearer ${access}` } : {}) },
       body: JSON.stringify({ refresh_token: refresh }),
     });
     let json: any;
     try { json = await res.json(); } catch { return false; }
     if (json.code === 0 && json.data) {
-      setTokens(json.data.access_token, json.data.refresh_token);
+      setTokens(json.data.access_token, json.data.refresh_token, json.data.expires_in);
       return true;
     }
   } catch {}
@@ -271,10 +273,10 @@ export const financeApi = {
     const qs = params.toString();
     return request("GET", `/finance/assets${qs ? `?${qs}` : ""}`);
   },
-  createAsset(data: { category_id: string; name: string; amount: number; currency?: string; as_of_date?: number; notes?: string }): Promise<{ asset_id: string }> {
+  createAsset(data: { category_id: string; name: string; amount: number; currency?: string; as_of_date?: number; sort_order?: number; notes?: string }): Promise<{ asset_id: string }> {
     return request("POST", "/finance/assets", { currency: "CNY", ...data });
   },
-  updateAsset(assetId: string, data: { name?: string; amount?: number; currency?: string; as_of_date?: number; notes?: string }) {
+  updateAsset(assetId: string, data: { name?: string; amount?: number; currency?: string; as_of_date?: number; sort_order?: number; notes?: string }) {
     return request("PUT", `/finance/assets/${assetId}`, data);
   },
   deleteAsset(assetId: string) {
@@ -304,10 +306,10 @@ export const financeApi = {
     const qs = params.toString();
     return request("GET", `/finance/liabilities${qs ? `?${qs}` : ""}`);
   },
-  createLiability(data: { category_id: string; name: string; amount: number; currency?: string; interest_rate?: number; due_date?: number; notes?: string }): Promise<{ liability_id: string }> {
+  createLiability(data: { category_id: string; name: string; amount: number; currency?: string; as_of_date?: number; sort_order?: number; interest_rate?: number; due_date?: number; notes?: string }): Promise<{ liability_id: string }> {
     return request("POST", "/finance/liabilities", { currency: "CNY", ...data });
   },
-  updateLiability(liabilityId: string, data: { name?: string; amount?: number; currency?: string; interest_rate?: number; due_date?: number; notes?: string }) {
+  updateLiability(liabilityId: string, data: { name?: string; amount?: number; currency?: string; as_of_date?: number; sort_order?: number; interest_rate?: number; due_date?: number; notes?: string }) {
     return request("PUT", `/finance/liabilities/${liabilityId}`, data);
   },
   deleteLiability(liabilityId: string) {
@@ -325,10 +327,10 @@ export const financeApi = {
     if (params?.page_size) qs.set("page_size", String(params.page_size));
     return request("GET", `/finance/transactions?${qs.toString()}`);
   },
-  createTransaction(data: { category_id: string; type: number; amount: number; transaction_date: number; description?: string; notes?: string; currency?: string }): Promise<{ transaction_id: string }> {
+  createTransaction(data: { category_id: string; type: number; amount: number; transaction_date: number; description?: string; sort_order?: number; notes?: string; currency?: string }): Promise<{ transaction_id: string }> {
     return request("POST", "/finance/transactions", { currency: "CNY", ...data });
   },
-  updateTransaction(transactionId: string, data: { amount?: number; description?: string; currency?: string; notes?: string }) {
+  updateTransaction(transactionId: string, data: { amount?: number; description?: string; transaction_date?: number; sort_order?: number; currency?: string; notes?: string }) {
     return request("PUT", `/finance/transactions/${transactionId}`, data);
   },
   deleteTransaction(transactionId: string) {

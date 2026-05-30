@@ -28,27 +28,24 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
     let cancelled = false;
     (async () => {
-      const ok = await refreshTokens();
+      await refreshTokens();
       if (!cancelled) {
-        if (ok) {
-          startTokenRefresh();
-        }
         setLoading(false);
       }
     })();
 
-    return () => { cancelled = true; stopTokenRefresh(); };
+    return () => { cancelled = true; };
   }, []);
 
   const login = useCallback(async (identifier: string, password: string) => {
     const result = await authApi.login(identifier, password);
-    setTokens(result.access_token, result.refresh_token);
+    setTokens(result.access_token, result.refresh_token, result.expires_in);
     startTokenRefresh();
   }, []);
 
   const register = useCallback(async (authType: "email" | "phone" | "username", identifier: string, password: string) => {
     const result = await authApi.register(authType, identifier, password);
-    setTokens(result.access_token, result.refresh_token);
+    setTokens(result.access_token, result.refresh_token, result.expires_in);
     startTokenRefresh();
   }, []);
 
