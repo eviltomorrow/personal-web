@@ -2,28 +2,87 @@
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "/api/v1";
 
-function getAccessToken(): string | null {
+export function getAccessToken(): string | null {
   if (typeof window === "undefined") return null;
   return localStorage.getItem("access_token");
 }
 
-function getRefreshToken(): string | null {
+export function getRefreshToken(): string | null {
   if (typeof window === "undefined") return null;
   return localStorage.getItem("refresh_token");
+}
+
+function getExpiresAt(): number | null {
+  if (typeof window === "undefined") return null;
+  const v = localStorage.getItem("expires_at");
+  return v ? parseInt(v, 10) : null;
+}
+
+function decodeExpFromJWT(token: string): number | null {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+    const payload = JSON.parse(atob(parts[1]));
+    return payload.exp ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export function setTokens(access: string, refresh: string) {
   localStorage.setItem("access_token", access);
   localStorage.setItem("refresh_token", refresh);
+  const exp = decodeExpFromJWT(access);
+  if (exp) {
+    localStorage.setItem("expires_at", String(exp));
+  }
 }
 
 export function clearTokens() {
   localStorage.removeItem("access_token");
   localStorage.removeItem("refresh_token");
+  localStorage.removeItem("expires_at");
 }
 
 export function isLoggedIn(): boolean {
   return !!getAccessToken();
+}
+
+const REFRESH_INTERVAL_MS = 30_000;
+const REFRESH_WINDOW_SEC = 300;
+let refreshTimer: ReturnType<typeof setInterval> | null = null;
+
+async function tryProactiveRefresh(): Promise<void> {
+  const exp = getExpiresAt();
+  if (!exp) return;
+  const nowSec = Math.floor(Date.now() / 1000);
+  if (exp - nowSec > REFRESH_WINDOW_SEC) return;
+  const refresh = getRefreshToken();
+  if (!refresh) return;
+  try {
+    const res = await fetch(`${API_BASE}/auth/token/refresh`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh_token: refresh }),
+    });
+    const json: any = await res.json();
+    if (json.code === 0 && json.data) {
+      setTokens(json.data.access_token, json.data.refresh_token);
+    }
+  } catch {}
+}
+
+export function startTokenRefresh() {
+  stopTokenRefresh();
+  tryProactiveRefresh();
+  refreshTimer = setInterval(tryProactiveRefresh, REFRESH_INTERVAL_MS);
+}
+
+export function stopTokenRefresh() {
+  if (refreshTimer !== null) {
+    clearInterval(refreshTimer);
+    refreshTimer = null;
+  }
 }
 
 class ApiError extends Error {
@@ -33,7 +92,7 @@ class ApiError extends Error {
   }
 }
 
-async function refreshTokens(): Promise<boolean> {
+export async function refreshTokens(): Promise<boolean> {
   const refresh = getRefreshToken();
   if (!refresh) return false;
   try {
@@ -177,6 +236,11 @@ export const authApi = {
   register(authType: "email" | "phone" | "username", identifier: string, password: string): Promise<LoginResult> {
     return request<LoginResult>("POST", "/auth/register", { auth_type: authType, identifier, password });
   },
+
+  revokeToken(refreshToken: string): Promise<void> {
+    return request<void>("POST", "/auth/token/revoke", { refresh_token: refreshToken }, false);
+  },
+
 };
 
 // ── Finance API ──

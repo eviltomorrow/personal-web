@@ -1,7 +1,18 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useUser } from "@/lib/user-context";
 import { I, type NavItem } from "./icons";
+
+function AvatarIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth="1.5">
+      <circle cx="10" cy="7" r="3.5" />
+      <path d="M3 18c0-3.5 3.5-6 7-6s7 2.5 7 6" />
+    </svg>
+  );
+}
 
 export default function DashboardHeader({
   activeNav,
@@ -10,18 +21,31 @@ export default function DashboardHeader({
   activeNav: string;
   navItems: NavItem[];
 }) {
+  const router = useRouter();
+  const { logout } = useUser();
   const [bellOpen, setBellOpen] = useState(false);
+  const [avatarOpen, setAvatarOpen] = useState(false);
   const bellRef = useRef<HTMLDivElement>(null);
+  const avatarRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (bellRef.current && !bellRef.current.contains(e.target as Node)) {
         setBellOpen(false);
       }
+      if (avatarRef.current && !avatarRef.current.contains(e.target as Node)) {
+        setAvatarOpen(false);
+      }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  async function handleLogout() {
+    setAvatarOpen(false);
+    await logout();
+    router.push("/login");
+  }
 
   return (
     <header className="relative flex h-14 flex-shrink-0 items-center justify-between border-b border-[#e8e8ed]/70 bg-white/80 px-6 backdrop-blur-xl z-20">
@@ -57,6 +81,27 @@ export default function DashboardHeader({
                   <span className="mt-2">暂无通知</span>
                 </div>
               </div>
+            </div>
+          )}
+        </div>
+
+        <div className="relative" ref={avatarRef}>
+          <button onClick={() => setAvatarOpen(!avatarOpen)}
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-[#0071e3]/10 text-[#0071e3] transition-all duration-200 hover:bg-[#0071e3]/20 cursor-pointer"
+          >
+            <AvatarIcon />
+          </button>
+
+          {avatarOpen && (
+            <div className="absolute right-0 top-10 w-44 rounded-2xl border border-[#d2d2d7]/80 bg-white/95 py-2 shadow-lg backdrop-blur-xl z-50 overflow-hidden">
+              <button onClick={handleLogout}
+                className="flex w-full items-center gap-3 px-4 py-2.5 text-[13px] text-red-500 transition-colors hover:bg-red-50 cursor-pointer"
+              >
+                <svg viewBox="0 0 16 16" fill="none" className="h-4 w-4 shrink-0" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M6 14H3a1 1 0 01-1-1V3a1 1 0 011-1h3M11 11l3-3-3-3M14 8H6" />
+                </svg>
+                退出登录
+              </button>
             </div>
           )}
         </div>

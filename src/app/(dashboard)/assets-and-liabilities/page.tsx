@@ -521,8 +521,7 @@ export default function BalanceSheetPage() {
         setStore((prev) => ({ ...prev, [activeMonth]: apiData }));
         syncedIdsRef.current = collectIds(apiData);
       }
-      setLoading(false);
-    });
+    }).finally(() => setLoading(false));
   }, [activeMonth]);
 
   function collectIds(data: SheetData): Set<string> {
