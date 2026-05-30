@@ -45,7 +45,11 @@ export function clearTokens() {
 }
 
 export function isLoggedIn(): boolean {
-  return !!getAccessToken();
+  const token = getAccessToken();
+  if (!token) return false;
+  const expiredAt = getExpiresAt();
+  if (expiredAt && expiredAt * 1000 < Date.now()) return false;
+  return true;
 }
 
 const REFRESH_INTERVAL_MS = 30_000;
@@ -108,7 +112,6 @@ export async function refreshTokens(): Promise<boolean> {
       return true;
     }
   } catch {}
-  clearTokens();
   return false;
 }
 
@@ -199,17 +202,6 @@ export interface Liability {
   updated_at: number;
 }
 
-export interface TransactionCategory {
-  category_id: string;
-  user_id: string;
-  name: string;
-  type: number;
-  icon: string;
-  sort_order: number;
-  created_at: number;
-  updated_at: number;
-}
-
 export interface Transaction {
   transaction_id: string;
   user_id: string;
@@ -237,15 +229,18 @@ export const authApi = {
     return request<LoginResult>("POST", "/auth/register", { auth_type: authType, identifier, password });
   },
 
-  revokeToken(refreshToken: string): Promise<void> {
+  async revokeToken(refreshToken: string): Promise<void> {
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     const token = getAccessToken();
     if (token) headers["Authorization"] = `Bearer ${token}`;
-    return fetch(`${API_BASE}/auth/token/revoke`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ refresh_token: refreshToken }),
-    }).then(() => {});
+    try {
+      await fetch(`${API_BASE}/auth/token/revoke`, {
+        method: "POST", headers,
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
+    } finally {
+      clearTokens();
+    }
   },
 
 };
@@ -317,21 +312,6 @@ export const financeApi = {
   },
   deleteLiability(liabilityId: string) {
     return request("DELETE", `/finance/liabilities/${liabilityId}`);
-  },
-
-  // Transaction Categories
-  listTransactionCategories(type?: number): Promise<{ categories: TransactionCategory[] }> {
-    const qs = type !== undefined ? `?type=${type}` : "";
-    return request("GET", `/finance/transaction-categories${qs}`);
-  },
-  createTransactionCategory(data: { name: string; type: number; icon?: string; sort_order?: number }): Promise<{ category_id: string }> {
-    return request("POST", "/finance/transaction-categories", data);
-  },
-  updateTransactionCategory(categoryId: string, data: { name?: string; icon?: string; sort_order?: number }) {
-    return request("PUT", `/finance/transaction-categories/${categoryId}`, data);
-  },
-  deleteTransactionCategory(categoryId: string) {
-    return request("DELETE", `/finance/transaction-categories/${categoryId}`);
   },
 
   // Transactions

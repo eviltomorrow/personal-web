@@ -4,7 +4,6 @@ import { createContext, useContext, useState, useEffect, useCallback } from "rea
 import { authApi, isLoggedIn, setTokens, clearTokens, startTokenRefresh, stopTokenRefresh, getRefreshToken, refreshTokens } from "@/lib/api";
 
 interface UserContextType {
-  user: null;
   loading: boolean;
   login: (identifier: string, password: string) => Promise<void>;
   register: (authType: "email" | "phone" | "username", identifier: string, password: string) => Promise<void>;
@@ -12,7 +11,6 @@ interface UserContextType {
 }
 
 const UserContext = createContext<UserContextType>({
-  user: null,
   loading: true,
   login: async () => {},
   register: async () => {},
@@ -34,8 +32,6 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       if (!cancelled) {
         if (ok) {
           startTokenRefresh();
-        } else {
-          clearTokens();
         }
         setLoading(false);
       }
@@ -66,7 +62,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <UserContext.Provider value={{ user: null, loading, login, register, logout }}>
+    <UserContext.Provider value={{ loading, login, register, logout }}>
       {children}
     </UserContext.Provider>
   );

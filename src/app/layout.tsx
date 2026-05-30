@@ -3,8 +3,8 @@ import "./globals.css";
 import { UserProvider } from "@/lib/user-context";
 
 export const metadata: Metadata = {
-  title: "登录 - liarsa",
-  description: "登录您的 liarsa 账户",
+  title: "liarsa",
+  description: "个人财务管理",
 };
 
 export default function RootLayout({

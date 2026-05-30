@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode } from "react";
+import { type ReactNode, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/sidebar";
 import DashboardHeader from "@/components/dashboard-header";
@@ -29,6 +29,11 @@ function FeatureCard({ icon, label, desc, onClick, gradient, accent }: {
 
 export default function HomePage() {
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   function handleNavChange(key: string) {
     if (key === "assets-and-liabilities") {
@@ -54,8 +59,10 @@ export default function HomePage() {
           <div className="mx-auto w-full max-w-[800px] px-6 pt-12 pb-20">
 
             <div className="mb-10">
-              <h1 className="text-[32px] font-semibold tracking-[-0.03em] text-[#1d1d1f]">{greeting}</h1>
-              <p className="mt-1.5 text-[15px] text-[#6e6e73]">欢迎回来，今天是 {now.toLocaleDateString("zh-CN", { year: "numeric", month: "long", day: "numeric", weekday: "long" })}</p>
+              <h1 className="text-[32px] font-semibold tracking-[-0.03em] text-[#1d1d1f]">{mounted ? greeting : "加载中..."}</h1>
+              {mounted && (
+                <p className="mt-1.5 text-[15px] text-[#6e6e73]">欢迎回来，今天是 {now.toLocaleDateString("zh-CN", { year: "numeric", month: "long", day: "numeric", weekday: "long" })}</p>
+              )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">

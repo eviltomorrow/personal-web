@@ -16,14 +16,14 @@ export default function Sidebar({
 
   return (
     <aside className={`flex flex-col border-r border-[#e8e8ed]/70 bg-white/95 backdrop-blur-xl transition-all duration-300 ${collapsed ? "w-[60px]" : "w-[220px]"}`}>
-      <div className={`flex h-14 items-center border-b border-[#f0f0f0] ${collapsed ? "justify-center" : "gap-3 px-4"}`}>
+      <button onClick={() => onNavChange("home")} className={`flex h-14 items-center border-b border-[#f0f0f0] w-full cursor-pointer ${collapsed ? "justify-center" : "gap-3 px-4"}`}>
         <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-[#0071e3] via-[#4a9eff] to-[#005bbf] text-[11px] font-bold text-white shadow-[0_2px_8px_rgba(0,113,227,0.3)]">
           L
         </div>
         <span className={`overflow-hidden whitespace-nowrap text-[15px] font-semibold text-[#1d1d1f] tracking-[-0.01em] transition-all duration-300 ${collapsed ? "max-w-0 opacity-0" : "max-w-[140px] opacity-100"}`}>
           liarsa
         </span>
-      </div>
+      </button>
 
       <nav className="flex-1 space-y-0.5 overflow-y-auto px-2 py-4">
         {items.map((item) => {

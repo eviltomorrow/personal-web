@@ -1,5 +1,3 @@
-"use client";
-
 import type { ReactNode } from "react";
 
 function Icon({ path, viewBox = "0 0 20 20" }: { path: string; viewBox?: string }) {

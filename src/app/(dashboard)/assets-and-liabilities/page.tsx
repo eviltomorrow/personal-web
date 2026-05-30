@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/sidebar";
 import DashboardHeader from "@/components/dashboard-header";
+
 import { I, navItems } from "@/components/icons";
 import { financeApi, isLoggedIn } from "@/lib/api";
 
@@ -200,28 +201,28 @@ async function loadFromAPI(month: string): Promise<SheetData | null> {
   }
 }
 
-async function syncGroupToAPI(section: Section, group: Group, _action: "create" | "update" | "delete"): Promise<string | null> {
+async function syncGroupToAPI(section: Section, group: Group, action: "create" | "update" | "delete"): Promise<string | null> {
   if (!isLoggedIn()) return null;
   try {
     if (section === "assets") {
-      if (_action === "create") {
+      if (action === "create") {
         const res = await financeApi.createAssetCategory({ name: group.label, sort_order: group.sort_order || 0 });
         return res.category_id;
-      } else if (_action === "update") {
+      } else if (action === "update") {
         await financeApi.updateAssetCategory(group.id, { name: group.label, sort_order: group.sort_order });
         return group.id;
-      } else if (_action === "delete") {
+      } else if (action === "delete") {
         await financeApi.deleteAssetCategory(group.id);
         return null;
       }
     } else if (section === "liabilities") {
-      if (_action === "create") {
+      if (action === "create") {
         const res = await financeApi.createLiabilityCategory({ name: group.label, sort_order: group.sort_order || 0 });
         return res.category_id;
-      } else if (_action === "update") {
+      } else if (action === "update") {
         await financeApi.updateLiabilityCategory(group.id, { name: group.label, sort_order: group.sort_order });
         return group.id;
-      } else if (_action === "delete") {
+      } else if (action === "delete") {
         await financeApi.deleteLiabilityCategory(group.id);
         return null;
       }
@@ -230,28 +231,28 @@ async function syncGroupToAPI(section: Section, group: Group, _action: "create" 
   return null;
 }
 
-async function syncEntryToAPI(section: Section, categoryId: string, entry: Entry, _action: "create" | "update" | "delete"): Promise<string | null> {
+async function syncEntryToAPI(section: Section, categoryId: string, entry: Entry, action: "create" | "update" | "delete"): Promise<string | null> {
   if (!isLoggedIn()) return null;
   try {
     if (section === "assets") {
-      if (_action === "create") {
+      if (action === "create") {
         const res = await financeApi.createAsset({ category_id: categoryId, name: entry.name, amount: entry.amount });
         return res.asset_id;
-      } else if (_action === "update") {
+      } else if (action === "update") {
         await financeApi.updateAsset(entry.id, { name: entry.name, amount: entry.amount });
         return entry.id;
-      } else if (_action === "delete") {
+      } else if (action === "delete") {
         await financeApi.deleteAsset(entry.id);
         return null;
       }
     } else if (section === "liabilities") {
-      if (_action === "create") {
+      if (action === "create") {
         const res = await financeApi.createLiability({ category_id: categoryId, name: entry.name, amount: entry.amount });
         return res.liability_id;
-      } else if (_action === "update") {
+      } else if (action === "update") {
         await financeApi.updateLiability(entry.id, { name: entry.name, amount: entry.amount });
         return entry.id;
-      } else if (_action === "delete") {
+      } else if (action === "delete") {
         await financeApi.deleteLiability(entry.id);
         return null;
       }
@@ -510,6 +511,7 @@ export default function BalanceSheetPage() {
   const monthPickerRef = useRef<HTMLDivElement>(null);
   const [calendarYear, setCalendarYear] = useState(() => new Date().getFullYear());
   const syncedIdsRef = useRef<Set<string>>(new Set());
+
   useEffect(() => {
     if (store[activeMonth]) {
       syncedIdsRef.current = collectIds(store[activeMonth]);

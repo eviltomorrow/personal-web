@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/lib/user-context";
 
@@ -65,9 +66,9 @@ export default function LoginPage() {
                 <label htmlFor="password" className="text-[12px] font-medium text-[#6e6e73]">
                   密码
                 </label>
-                <a href="/forgot-password" className="text-[12px] text-[#0071e3] hover:underline cursor-pointer">
-                  忘记密码？
-                </a>
+                <Link href="/forgot-password" className="text-[12px] text-[#0071e3] hover:underline cursor-pointer">
+                   忘记密码？
+                 </Link>
               </div>
               <input
                 id="password"
